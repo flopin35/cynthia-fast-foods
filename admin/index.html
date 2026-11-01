@@ -1217,7 +1217,12 @@ function startLive(){
   }, err => {
     clearTimeout(timer);
     const c = (err && err.code) || "";
-    if (c.includes("permission-denied")){ stopLive(); render(); showLogin("You're logged in, but Firebase won't show the orders. Check that the Firestore security rules use this email as the admin."); }
+    if (c.includes("permission-denied")){
+      const em = (fb.auth.currentUser && fb.auth.currentUser.email) || "";
+      stopLive(); render();
+      showLogin(`You're logged in as <b>${esc(em)}</b>, but Firebase won't show the orders yet.<ol><li>In Firebase, open <b>Firestore Database → Rules</b></li><li>Make sure this exact email is in the rules, in place of YOUR-ADMIN-EMAIL</li><li>Click <b>Publish</b>, wait a minute, then <a href="#" id="retryLive">try again</a></li></ol>`);
+      const rl = $("#retryLive"); if (rl) rl.addEventListener("click", ev => { ev.preventDefault(); if (fb.auth.currentUser) startLive(); });
+    }
     else toast(fbErr(err, "Lost connection to your orders."));
   });
 }
