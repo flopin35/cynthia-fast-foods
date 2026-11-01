@@ -308,6 +308,10 @@ fieldset.field{border:0}
 .btn-sm{padding:.7rem 1.1rem;font-size:.92rem}
 @media (max-width:760px){ body.has-items .welcome{bottom:5.6rem} }
 
+.save-state{font-weight:600;font-size:.92rem;margin:.2rem 0 .6rem}
+.save-state.wait{color:var(--ink-soft)}
+.save-state.ok{color:#167A45}
+.save-state.bad{color:var(--hibiscus)}
 /* Responsive */
 @media (max-width:960px){
   .hero-grid{grid-template-columns:1fr;padding:3rem 0 4rem;gap:2rem}
@@ -878,6 +882,7 @@ function renderDrawer(){
         <div class="road" aria-hidden="true"><span class="sun"></span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="drive">${RIDER_SVG}</div></div>
         <h3>Thanks, ${escapeHtml(o.name.split(" ")[0])}! One last tap.</h3>
         <div class="ref">Order ${o.ref}</div>
+        <p class="save-state ${o.saveState || "wait"}" id="saveState" aria-live="polite">${!/^https?:$/.test(location.protocol) ? "" : o.saveState === "ok" ? "✓ Our kitchen has received your order." : o.saveState === "bad" ? "We couldn't reach our system. Please send your order on WhatsApp so we get it." : "Sending your order to our kitchen…"}</p>
         <p style="color:var(--ink-soft)">Send your order to our kitchen on WhatsApp and we'll confirm it and start cooking straight away.</p>
         <div class="receipt">
           ${o.items.map(i => `<div><span>${i.q} × ${i.name}</span><span>${i.gift ? "Free" : money(i.q*i.price)}</span></div>`).join("")}
@@ -951,6 +956,7 @@ function submitOrder(e){
     waLink:`https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(lines)}`};
   step = "done";
   renderDrawer();
+  if (lastOrder && lastOrder.saveState) setSaveState(lastOrder.saveState);
 }
 
 /* ============================================================
@@ -1052,14 +1058,38 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "1066310885299",
   appId: "1:1066310885299:web:d508e4944d01fffe18b5c6"
 };
+// Orders are sent with a "keepalive" request, so they still arrive if the customer
+// jumps straight to WhatsApp. Unsent orders are kept on the phone and retried.
+const toFs = v => v === null || v === undefined ? {nullValue:null}
+  : Array.isArray(v) ? {arrayValue: v.length ? {values: v.map(toFs)} : {}}
+  : typeof v === "object" ? {mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x]) => [k, toFs(x)]))}}
+  : typeof v === "number" ? (Number.isInteger(v) ? {integerValue:String(v)} : {doubleValue:v})
+  : typeof v === "boolean" ? {booleanValue:v} : {stringValue:String(v)};
+async function sendOrder(order){
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/orders?documentId=${encodeURIComponent(order.ref)}&key=${FIREBASE_CONFIG.apiKey}`;
+  const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({fields: toFs(order).mapValue.fields}), keepalive:true});
+  if (r.ok || r.status === 409) return true;            // 409 = already saved
+  throw new Error("HTTP " + r.status);
+}
+const pending = () => lsGet("cff-pending-orders", []);
+function setSaveState(state){
+  if (lastOrder) lastOrder.saveState = state;
+  const el = document.getElementById("saveState"); if (!el) return;
+  el.className = "save-state " + state;
+  el.textContent = state === "ok" ? "✓ Our kitchen has received your order." : state === "bad" ? "We couldn't reach our system. Please send your order on WhatsApp so we get it." : "Sending your order to our kitchen…";
+}
 async function saveOrderOnline(order){
   if (!/^https?:$/.test(location.protocol)) return;
-  try {
-    const base = "https://www.gstatic.com/firebasejs/12.0.0/";
-    const [appM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-firestore.js")]);
-    const app = appM.getApps().length ? appM.getApp() : appM.initializeApp(FIREBASE_CONFIG);
-    await fsM.setDoc(fsM.doc(fsM.getFirestore(app), "orders", order.ref), order);
-  } catch(e){ console.warn("Order not saved to admin panel:", e && e.code || e); }
+  lsSet("cff-pending-orders", [...pending().filter(o => o.ref !== order.ref), order]);
+  for (let attempt = 0; attempt < 3; attempt++){
+    try { await sendOrder(order); lsSet("cff-pending-orders", pending().filter(o => o.ref !== order.ref)); setSaveState("ok"); return; }
+    catch(e){ await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+  }
+  setSaveState("bad");
+}
+function retryPendingOrders(){
+  if (!/^https?:$/.test(location.protocol)) return;
+  pending().forEach(o => sendOrder(o).then(() => lsSet("cff-pending-orders", pending().filter(x => x.ref !== o.ref))).catch(() => {}));
 }
 
 /* ============================================================
@@ -1307,6 +1337,7 @@ $("#waText").textContent = BUSINESS.whatsapp.replace(/^233/, "0").replace(/^(\d{
 $("#phoneText").textContent = BUSINESS.phoneDisplay;
 $("#year").textContent = new Date().getFullYear();
 tickLunch(); setInterval(tickLunch, 1000);
+retryPendingOrders();
 renderTabs(); renderMenu(); renderBadge(); renderHours();
 initMotion();
 initWelcome();
