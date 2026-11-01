@@ -259,7 +259,7 @@ fieldset.field{border:0}
 .promo-strip.off button{color:var(--green-deep)}
 .rewards{margin-bottom:1rem}
 .rewards-text{font-size:.9rem;font-weight:600;color:var(--green);margin-bottom:.5rem}
-.rbar{position:relative;height:10px;background:var(--green-mist);border-radius:5px;margin:0 .4rem 1.8rem}
+.rbar{position:relative;height:10px;background:var(--green-mist);border-radius:5px;margin:.4rem .4rem 1rem}
 .rbar .rfill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--gold),var(--pepper));border-radius:5px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
 .rbar .mark{position:absolute;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--line);display:grid;place-items:center;font-size:.7rem}
 .rbar .mark.on{background:var(--gold);border-color:var(--gold)}
@@ -273,6 +273,14 @@ fieldset.field{border:0}
 .gift-line .thumb{background:var(--gold-soft)}
 .gift-line .free{color:var(--green);font-weight:700}
 .totals .disc{color:var(--hibiscus)}
+.totals div > span:last-child{white-space:nowrap;padding-left:.75rem}
+.cart-extras{padding:1rem 0 .4rem}
+.foot-bar{display:flex;align-items:center;gap:1rem}
+.foot-total{display:flex;flex-direction:column;line-height:1.15;white-space:nowrap}
+.foot-total small{font-size:.8rem;color:var(--ink-soft);font-weight:600}
+.foot-total b{font-size:1.3rem}
+.foot-bar .btn{flex:1;padding:1rem 1.1rem}
+.drawer-foot{padding:.9rem 1.5rem calc(.9rem + env(safe-area-inset-bottom))}
 .totals .disc button{font-size:.78rem;color:var(--ink-soft);text-decoration:underline;margin-left:.3rem}
 .promo-row{display:flex;gap:.5rem}
 .promo-row input{flex:1;text-transform:uppercase}
@@ -823,7 +831,8 @@ function renderDrawer(){
       </div>`; }).join("");
     const pr = pricing("delivery");
     body.innerHTML += pr.gifts.map(g => `<div class="line-item gift-line"><div class="thumb" aria-hidden="true">${ART[g.art]()}</div><div><h4>${g.name} 🎁</h4><div class="each">Your reward for ordering ${money(BOOSTERS.rewards.giftAt)} or more</div></div><div class="right"><span class="free">Free</span></div></div>`).join("");
-    foot.innerHTML = (window.__closedNote ? `<div class="hint" style="background:#FFF1C9;color:#6B4E00">${window.__closedNote}</div>` : "") + rewardsHTML(pr) + bumpHTML() + totalsHTML(pr, "delivery") + `<button class="btn btn-gold btn-block" data-next>Continue to delivery details</button>`;
+    body.innerHTML += `<div class="cart-extras">${window.__closedNote ? `<div class="hint" style="background:#FFF1C9;color:#6B4E00">${window.__closedNote}</div>` : ""}${rewardsHTML(pr)}${bumpHTML()}${totalsHTML(pr, "delivery")}</div>`;
+    foot.innerHTML = footBar(pr.total, `<button class="btn btn-gold" data-next>Continue</button>`);
   }
   if (step === "details"){
     const saved = (() => { try { return JSON.parse(localStorage.getItem("cff-details")||"{}"); } catch(e){ return {}; } })();
@@ -851,7 +860,10 @@ function renderDrawer(){
     foot.style.display = "";
     const renderFootTotals = () => {
       const mode = (body.querySelector('input[name="mode"]:checked')||{}).value || "delivery";
-      foot.innerHTML = totalsHTML(pricing(mode), mode) + `<button class="btn btn-gold btn-block" type="submit" form="checkout">Confirm order</button>`;
+      const prd = pricing(mode);
+      let box = $("#detailTotals"); if (!box){ box = document.createElement("div"); box.id = "detailTotals"; box.className = "cart-extras"; body.appendChild(box); }
+      box.innerHTML = `<h4 style="font-size:.95rem;margin-bottom:.4rem">Order summary</h4>` + totalsHTML(prd, mode);
+      foot.innerHTML = footBar(prd.total, `<button class="btn btn-gold" type="submit" form="checkout">Confirm order</button>`);
       $("#f-addr").style.display = mode === "pickup" ? "none" : "";
     };
     renderFootTotals(); window.__refreshTotals = renderFootTotals;
@@ -888,11 +900,14 @@ function rewardsHTML(pr){
   const R = BOOSTERS.rewards, top = Math.max(R.giftAt, BUSINESS.freeDeliveryOver), fd = BUSINESS.freeDeliveryOver, gift = byId(R.giftId).name.toLowerCase();
   const text = pr.net < fd ? `Add ${money(fd - pr.net)} more for free delivery` : pr.net < R.giftAt ? `Free delivery unlocked! Add ${money(R.giftAt - pr.net)} more for a free ${gift} 🎁` : `You've unlocked free delivery and a free ${gift} 🎁`;
   const pos = v => (v / top * 100).toFixed(1);
-  return `<div class="rewards"><div class="rewards-text">${text}</div><div class="rbar" aria-hidden="true"><span class="rfill" style="width:${Math.min(100, pr.net / top * 100).toFixed(1)}%"></span><span class="mark ${pr.net >= fd ? "on" : ""}" style="left:${pos(fd)}%">🛵<span>Free delivery</span></span><span class="mark end ${pr.net >= R.giftAt ? "on" : ""}" style="left:calc(${pos(R.giftAt)}% - 11px)">🎁<span>Free ${gift}</span></span></div></div>`;
+  return `<div class="rewards"><div class="rewards-text">${text}</div><div class="rbar" aria-hidden="true"><span class="rfill" style="width:${Math.min(100, pr.net / top * 100).toFixed(1)}%"></span><span class="mark ${pr.net >= fd ? "on" : ""}" style="left:${pos(fd)}%" title="Free delivery at ${money(fd)}">🛵</span><span class="mark end ${pr.net >= R.giftAt ? "on" : ""}" style="left:calc(${pos(R.giftAt)}% - 11px)" title="Free ${gift} at ${money(R.giftAt)}">🎁</span></div></div>`;
 }
 function bumpHTML(){
   const B = BOOSTERS.checkoutAddOn, base = _base(B.id); if (!B.on || !base.name) return "";
   return `<label class="bump"><input type="checkbox" id="bumpBox" ${cart.bump ? "checked" : ""}><span><span class="flag">One-time offer</span><b>Yes, add a chilled ${base.name.toLowerCase()} for ${money(B.price)}</b><small>Usually ${money(base.price)}. Only at checkout.</small></span></label>`;
+}
+function footBar(total, button){
+  return `<div class="foot-bar"><div class="foot-total"><small>Total</small><b>${money(total)}</b></div>${button}</div>`;
 }
 function totalsHTML(pr, mode){
   return `<div class="totals"><div><span>Subtotal</span><span>${money(pr.itemsTotal)}</span></div>
