@@ -1,0 +1,17 @@
+# Cynthia Fast Foods
+
+Website for Cynthia Fast Foods: menu, meal deals and online ordering through WhatsApp.
+
+- **Orders go to:** WhatsApp 024 010 4225
+- **Call:** 050 873 9020
+- **Open:** daily, 8am to 7pm
+
+## Editing
+
+Everything is in `index.html`. Near the top of the script you'll find:
+
+- `BUSINESS`: phone, WhatsApp number, address, delivery fee, opening hours
+- `BOOSTERS`: meal deals, "Make it a meal" offer, checkout offer, rewards, lunch deal, welcome code
+- `MENU`: dish names, descriptions and prices
+
+Commit a change to `main` and GitHub Pages republishes the site within a minute or two.
