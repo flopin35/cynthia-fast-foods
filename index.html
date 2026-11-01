@@ -1202,17 +1202,9 @@ function initMotion(){
     plateX(nx * 14); plateY(ny * 14);
   });
 
-  /* Magnetic buttons */
-  document.querySelectorAll(".hero-ctas .btn, #openCart").forEach(b => {
-    const mx = gsap.quickTo(b, "x", {duration:.4, ease:"power3"}), my = gsap.quickTo(b, "y", {duration:.4, ease:"power3"});
-    b.addEventListener("mousemove", e => { const r = b.getBoundingClientRect(); mx((e.clientX - r.left - r.width/2) * .3); my((e.clientY - r.top - r.height/2) * .4); });
-    b.addEventListener("mouseleave", () => { mx(0); my(0); });
-  });
-
   /* ---- Scroll: hero ---- */
   gsap.to("#heroArt svg", {rotation:90, ease:"none", scrollTrigger:{trigger:".hero", start:"top top", end:"bottom top", scrub:true}});
   gsap.to("#floaters", {y:-120, ease:"none", scrollTrigger:{trigger:".hero", start:"top top", end:"bottom top", scrub:true}});
-  gsap.to(".hero-grid > div:first-child", {y:90, opacity:.2, ease:"none", scrollTrigger:{trigger:".hero", start:"top top", end:"bottom top", scrub:true}});
   gsap.to("#progressBar", {scaleX:1, ease:"none", scrollTrigger:{start:0, end:"max", scrub:.3}});
 
   /* Marquee speeds up with scroll velocity */
