@@ -312,6 +312,8 @@ fieldset.field{border:0}
 .save-state.wait{color:var(--ink-soft)}
 .save-state.ok{color:#167A45}
 .save-state.bad{color:var(--hibiscus)}
+.closed-ic{font-size:3rem;line-height:1;margin-bottom:.6rem}
+#closedPop h3{font-size:1.7rem}
 /* Responsive */
 @media (max-width:960px){
   .hero-grid{grid-template-columns:1fr;padding:3rem 0 4rem;gap:2rem}
@@ -583,6 +585,14 @@ section[id]{scroll-margin-top:70px}
     <h3 id="upTitle">Make it a meal?</h3>
     <p id="upText"></p>
     <div class="up-btns"><button class="btn btn-gold btn-block" id="upYes">Yes, make it a meal</button><button class="up-no" id="upNo">No thanks</button></div>
+  </div>
+</div>
+<div class="upsell" id="closedPop" role="dialog" aria-modal="true" aria-labelledby="closedTitle" hidden>
+  <div class="upsell-card">
+    <div class="closed-ic" aria-hidden="true">🕗</div>
+    <h3 id="closedTitle">Sorry, we're currently not serving</h3>
+    <p id="closedText"></p>
+    <div class="up-btns"><button class="btn btn-gold btn-block" id="closedOk">OK</button></div>
   </div>
 </div>
 <div class="welcome" id="welcome" role="dialog" aria-labelledby="wTitle" hidden>
@@ -924,6 +934,7 @@ function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 
 function submitOrder(e){
   e.preventDefault();
+  if (!isOpenNow()){ showClosed(); return; }
   const f = e.target, data = Object.fromEntries(new FormData(f));
   let ok = true;
   const mark = (id, bad) => { $(id).classList.toggle("invalid", bad); if (bad) ok = false; };
@@ -1003,8 +1014,10 @@ function closeDrawer(){
 
 document.addEventListener("click", e => {
   const t = e.target.closest("button, a"); if (!t) return;
+  if ((t.dataset.add || t.dataset.inc || "next" in t.dataset) && !isOpenNow()) { showClosed(); return; }
   if (t.dataset.add) { flyToCart(t); changeQty(t.dataset.add, 1); }
   else if (t.dataset.inc) { flyToCart(t); changeQty(t.dataset.inc, 1); }
+  else if (t.id === "closedOk") { $("#closedPop").hidden = true; }
   else if (t.dataset.dec) changeQty(t.dataset.dec, -1);
   else if (t.dataset.filter){ filter = t.dataset.filter; renderTabs(); renderMenu(); animateCards(); }
   else if (t.dataset.scroll){ goTo(t.dataset.scroll); }
@@ -1095,6 +1108,15 @@ function retryPendingOrders(){
 /* ============================================================
    BOOSTER LOGIC
    ============================================================ */
+function isOpenNow(now = new Date()){
+  const t = BUSINESS.hours[now.getDay()], h = now.getHours() + now.getMinutes()/60;
+  return h >= t.open && h < t.close;
+}
+function showClosed(){
+  const H = BUSINESS.hours, t = H[new Date().getDay()], same = H.every(x => x.open === H[0].open && x.close === H[0].close);
+  $("#closedText").textContent = same ? `Please try again between ${fmtHour(t.open)} and ${fmtHour(t.close)}.` : `Please try again during our opening hours. Today we're open ${fmtHour(t.open)} to ${fmtHour(t.close)}.`;
+  $("#closedPop").hidden = false; setTimeout(() => $("#closedOk").focus(), 50);
+}
 let upsellNo = 0, upsellTimer;
 function maybeUpsell(id){
   const d = byId(id);
@@ -1154,7 +1176,7 @@ function tickLunch(){
 document.addEventListener("change", e => {
   if (e.target.id === "bumpBox"){ if (e.target.checked){ cart.bump = 1; toast("Added at the checkout price"); } else delete cart.bump; save(); renderBadge(); renderDrawer(); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#upsell").hidden){ closeUpsell(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#upsell").hidden){ closeUpsell(); } if (e.key === "Escape" && !$("#closedPop").hidden){ $("#closedPop").hidden = true; } });
 
 /* ============================================================
    INIT
@@ -1331,7 +1353,7 @@ $("#waText").textContent = BUSINESS.whatsapp.replace(/^233/, "0").replace(/^(\d{
   $("#hoursFact").textContent = same ? `Open daily, ${fmtHour(H[0].open)} to ${fmtHour(H[0].close)}` : `Open 7 days a week`;
   const now = new Date(), t = H[now.getDay()], hr = now.getHours() + now.getMinutes()/60, open = hr >= t.open && hr < t.close;
   const nxt = hr < t.open ? `today at ${fmtHour(t.open)}` : `tomorrow at ${fmtHour(H[(now.getDay()+1)%7].open)}`;
-  window.__closedNote = open ? "" : `We're closed right now. Order ahead and we'll start cooking when we open ${nxt}.`;
+  window.__closedNote = "";
   if (!open){ $("#heroNote span").textContent = `Opens ${nxt}`; $("#heroNote i").style.background = "#F5B72A"; }
 })();
 $("#phoneText").textContent = BUSINESS.phoneDisplay;
