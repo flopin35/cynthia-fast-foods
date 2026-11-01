@@ -15,3 +15,7 @@ Everything is in `index.html`. Near the top of the script you'll find:
 - `MENU`: dish names, descriptions and prices
 
 Commit a change to `main` and GitHub Pages republishes the site within a minute or two.
+
+## Live site
+
+Hosted on Vercel: https://cynthia-fast-foods.vercel.app (redeploys automatically on every push to `main`).
