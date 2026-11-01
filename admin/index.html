@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cynthia Fast Foods Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#0E5A3A; --green-deep:#083A26; --green-mist:#E7F1EA;
+  --gold:#F5B72A; --gold-soft:#FFF1C9; --hibiscus:#C8205E; --hibiscus-soft:#FBE3EC;
+  --pepper:#E8552B; --bg:#F6F8F4; --panel:#fff; --ink:#24170F; --ink-soft:#6A5E55; --line:#E6E2DA;
+  --display:"Gluten","Trebuchet MS",sans-serif; --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:15.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--hibiscus);outline-offset:2px;border-radius:6px}
+.wrap{width:min(1320px,100% - 2rem);margin-inline:auto}
+
+/* Top bar */
+.top{background:var(--green);color:#fff;position:sticky;top:0;z-index:20}
+.top-in{display:flex;align-items:center;gap:1.2rem;min-height:70px;flex-wrap:wrap;padding:.6rem 0}
+.brand{display:flex;align-items:center;gap:.65rem;margin-right:auto}
+.brand svg{width:40px;height:40px}
+.brand b{font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1;display:block}
+.brand span{font-size:.82rem;color:var(--gold);font-weight:600}
+.seg{display:flex;background:rgba(255,255,255,.1);border-radius:999px;padding:4px}
+.seg button{padding:.5rem .95rem;border-radius:999px;font-weight:600;font-size:.9rem;color:rgba(255,255,255,.8)}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--green)}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-weight:700;border-radius:999px;padding:.7rem 1.2rem;font-size:.95rem;white-space:nowrap}
+.btn-gold{background:var(--gold);color:var(--green-deep)}
+.btn-gold:hover{background:#FFC53D}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green-deep)}
+.btn-line{border:1.5px solid var(--line);background:#fff}
+.btn-line:hover{border-color:var(--green)}
+.btn svg{width:18px;height:18px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* Banners */
+.banner{margin-top:1.2rem;border-radius:14px;padding:.85rem 1.1rem;display:flex;gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;font-weight:500}
+.banner.demo{background:var(--gold-soft);border:1.5px solid #F2D27A}
+.banner.info{background:#fff;border:1.5px solid var(--line)}
+.banner[hidden]{display:none}
+
+/* Grid */
+main{padding:1.2rem 0 4rem}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:1.1rem;margin-top:1.1rem;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:1.25rem 1.35rem;min-width:0}
+.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+.card h2{font-size:1.05rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.card .sub{color:var(--ink-soft);font-size:.88rem;margin-top:.1rem}
+
+/* KPI */
+.kpi{position:relative;overflow:hidden}
+.kpi .label{color:var(--ink-soft);font-weight:600;font-size:.9rem}
+.kpi .val{font-family:var(--display);font-weight:800;font-size:2.35rem;line-height:1.05;margin:.35rem 0 .3rem;color:var(--green)}
+.kpi .delta{font-size:.85rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .55rem;border-radius:999px}
+.delta.up{background:#E1F5EA;color:#167A45}.delta.down{background:#FDE7E3;color:#B5381A}.delta.flat{background:#F1EEE8;color:var(--ink-soft)}
+.kpi .spark{position:absolute;right:16px;top:18px;width:96px;height:36px;opacity:.9}
+.kpi.k1{background:var(--green);color:#fff;border-color:var(--green)}
+.kpi.k1 .label{color:rgba(255,255,255,.8)}.kpi.k1 .val{color:#fff}
+
+/* Charts */
+.chart{position:relative;margin-top:.9rem;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axis text{font-size:11px;fill:var(--ink-soft)}
+.gridline{stroke:#EEEAE3}
+.bar{transition:opacity .15s}
+.bar:hover{opacity:.8}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:.85rem;padding:.45rem .7rem;border-radius:10px;z-index:60;opacity:0;transition:opacity .1s;max-width:240px;line-height:1.35}
+.tip.show{opacity:1}
+.tip b{display:block}
+.empty-chart{color:var(--ink-soft);text-align:center;padding:2.5rem 1rem;font-size:.95rem}
+
+.hbars{display:grid;gap:.6rem;margin-top:1rem}
+.hrow{display:grid;grid-template-columns:minmax(110px,1.1fr) 2fr auto;gap:.7rem;align-items:center;font-size:.92rem}
+.hrow .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .track{height:14px;background:#F2EFE9;border-radius:7px;overflow:hidden}
+.hrow .fill{display:block;height:100%;border-radius:7px;background:var(--green);transform-origin:left;animation:grow .7s cubic-bezier(.2,.8,.2,1) both}
+.hrow .num{font-weight:700;white-space:nowrap;text-align:right;min-width:92px}
+.hrow .num small{display:block;font-weight:500;color:var(--ink-soft);font-size:.78rem}
+@keyframes grow{from{transform:scaleX(0)}}
+
+.stack{display:flex;height:22px;border-radius:11px;overflow:hidden;margin-top:1rem;background:#F2EFE9}
+.stack span{height:100%;animation:grow .7s cubic-bezier(.2,.8,.2,1) both}
+.legend{display:flex;flex-wrap:wrap;gap:.5rem 1.1rem;margin-top:.8rem;font-size:.88rem}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:.4rem;vertical-align:-1px}
+.legend b{margin-left:.3rem}
+.split{margin-top:1.2rem}
+.split h3{font-size:.9rem;font-weight:600;color:var(--ink-soft)}
+
+/* Insights */
+.insights{list-style:none;display:grid;gap:.7rem;margin-top:1rem}
+.ins{display:grid;grid-template-columns:38px 1fr;gap:.75rem;align-items:start;padding:.75rem;border-radius:14px;background:#FAF9F6}
+.ins .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.15rem}
+.ins.good .ic{background:#E1F5EA}.ins.warn .ic{background:#FFF1C9}.ins.idea .ic{background:var(--hibiscus-soft)}.ins.info .ic{background:var(--green-mist)}
+.ins b{display:block;font-size:.95rem;line-height:1.3}
+.ins p{color:var(--ink-soft);font-size:.88rem;margin-top:.15rem}
+
+/* Forecast */
+.fc-big{font-family:var(--display);font-weight:800;font-size:2.1rem;color:var(--green);line-height:1.1;margin-top:.7rem}
+.prep{list-style:none;margin-top:.8rem;display:grid;gap:.4rem}
+.prep li{display:flex;justify-content:space-between;font-size:.92rem;border-bottom:1px dashed var(--line);padding-bottom:.35rem}
+.prep li b{color:var(--green)}
+
+/* Chat */
+.chat{display:flex;flex-direction:column;height:520px}
+.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;padding:.9rem .1rem;margin-top:.4rem}
+.msg{max-width:88%;padding:.7rem .95rem;border-radius:16px;font-size:.93rem;white-space:pre-wrap;line-height:1.5}
+.msg.me{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:#F4F2EE;border-bottom-left-radius:4px}
+.msg.ai.err{background:#FDE7E3;color:#8A2A12}
+.chips{display:flex;gap:.45rem;flex-wrap:wrap;margin:.3rem 0 .7rem}
+.chip{border:1.5px solid var(--line);border-radius:999px;padding:.4rem .8rem;font-size:.85rem;font-weight:600;background:#fff}
+.chip:hover{border-color:var(--green);color:var(--green)}
+.chat-form{display:flex;gap:.5rem}
+.chat-form input{flex:1;border:1.5px solid var(--line);border-radius:999px;padding:.75rem 1.1rem;background:#fff}
+.chat-form input:focus{outline:none;border-color:var(--green)}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;margin-top:.9rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;color:var(--ink-soft);font-weight:600;font-size:.82rem;padding:.55rem .6rem;border-bottom:1.5px solid var(--line);white-space:nowrap}
+td{padding:.7rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}
+td.items{min-width:220px}
+td.num{text-align:right;font-weight:700;white-space:nowrap}
+.pill{display:inline-block;font-size:.78rem;font-weight:600;padding:.12rem .55rem;border-radius:999px;background:#F2EFE9;white-space:nowrap}
+.pill.mm{background:#FFF1C9}.pill.cash{background:#E1F5EA}.pill.wa{background:#DDF5E6}.pill.walk{background:var(--hibiscus-soft)}
+.del{color:var(--ink-soft);font-size:.82rem;font-weight:600;padding:.25rem .5rem;border-radius:8px}
+.del:hover{background:#FDE7E3;color:#B5381A}
+.del.sure{background:#B5381A;color:#fff}
+
+/* Drawer */
+.scrim{position:fixed;inset:0;background:rgba(36,23,15,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(520px,100%);background:var(--bg);z-index:50;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.dh{background:var(--green);color:#fff;padding:1.1rem 1.4rem;display:flex;justify-content:space-between;align-items:center}
+.dh h2{font-family:var(--display);font-weight:800;font-size:1.55rem}
+.x{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;color:#fff}
+.x svg{width:18px;height:18px}
+.tabs{display:flex;gap:.4rem;padding:1rem 1.4rem 0}
+.tab{padding:.55rem 1rem;border-radius:999px;font-weight:600;font-size:.92rem;border:1.5px solid var(--line);background:#fff}
+.tab[aria-selected="true"]{background:var(--green);border-color:var(--green);color:#fff}
+.db{flex:1;overflow-y:auto;padding:1rem 1.4rem 1.4rem}
+.df{padding:1rem 1.4rem;border-top:1px solid var(--line);background:#fff}
+textarea.paste{width:100%;min-height:190px;border:1.5px solid var(--line);border-radius:14px;padding:.85rem;background:#fff;font-size:.9rem;resize:vertical}
+textarea.paste:focus,.fld input:focus,.fld select:focus{outline:none;border-color:var(--green)}
+.help{color:var(--ink-soft);font-size:.86rem;margin:.4rem 0 .9rem}
+.preview{background:#fff;border:1.5px dashed var(--line);border-radius:14px;padding:1rem;margin-top:1rem;font-size:.92rem}
+.preview .row{display:flex;justify-content:space-between;gap:1rem;padding:.15rem 0}
+.preview .tot{font-weight:700;border-top:1px dashed var(--line);margin-top:.4rem;padding-top:.45rem}
+.warnmsg{color:#B5381A;font-size:.88rem;margin-top:.6rem;font-weight:500}
+.okmsg{color:#167A45;font-size:.88rem;margin-top:.6rem;font-weight:600}
+.fld{display:grid;gap:.3rem;margin-top:.8rem}
+.fld label{font-weight:600;font-size:.88rem}
+.fld input,.fld select{border:1.5px solid var(--line);border-radius:10px;padding:.6rem .75rem;background:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.walk-list{display:grid;gap:.45rem}
+.walk-item{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.55rem .75rem}
+.walk-item .n{font-weight:600;font-size:.92rem}
+.walk-item .p{color:var(--ink-soft);font-size:.82rem}
+.step{display:inline-flex;align-items:center;gap:.2rem;background:var(--green-mist);border-radius:999px;padding:3px}
+.step button{width:30px;height:30px;border-radius:50%;background:#fff;color:var(--green);font-weight:800}
+.step output{min-width:26px;text-align:center;font-weight:700}
+.walk-cat{font-size:.82rem;font-weight:700;color:var(--ink-soft);margin:.8rem 0 .2rem}
+.toast{position:fixed;left:50%;bottom:1.5rem;transform:translate(-50%,160%);background:var(--ink);color:#fff;padding:.75rem 1.2rem;border-radius:999px;font-weight:600;z-index:70;transition:transform .25s;visibility:hidden}
+.toast.show{transform:translate(-50%,0);visibility:visible}
+
+
+.btn-ghost{color:#fff;border:1.5px solid rgba(255,255,255,.35)}
+.btn-ghost:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+.set-sec{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1.1rem 1.15rem;margin-bottom:1rem}
+.set-sec h3{font-size:1rem;font-weight:700}
+.set-sec .help{margin:.3rem 0 .6rem}
+.choice-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.6rem}
+.choice{position:relative}
+.choice input{position:absolute;opacity:0;inset:0}
+.choice span{display:block;border:1.5px solid var(--line);border-radius:12px;padding:.7rem .85rem;font-weight:600;font-size:.93rem;cursor:pointer;background:#fff}
+.choice span small{display:block;font-weight:400;color:var(--ink-soft);font-size:.8rem}
+.choice input:checked + span{border-color:var(--green);background:var(--green-mist);box-shadow:inset 0 0 0 1px var(--green)}
+.choice input:focus-visible + span{outline:3px solid var(--hibiscus);outline-offset:2px}
+.keyrow{display:flex;gap:.45rem}
+.keyrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:.65rem .75rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88rem}
+.keyrow input:focus{outline:none;border-color:var(--green)}
+.status{font-size:.88rem;font-weight:600;margin-top:.6rem;display:flex;gap:.45rem;align-items:flex-start}
+.status i{width:9px;height:9px;border-radius:50%;flex:none;margin-top:.38rem;background:#B9B2A8}
+.status.ok{color:#167A45}.status.ok i{background:#2BB673}
+.status.bad{color:#B5381A}.status.bad i{background:#E8552B}
+.status.wait i{background:var(--gold)}
+.btn-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.btn-sm{padding:.5rem .9rem;font-size:.88rem}
+.note{font-size:.84rem;color:var(--ink-soft);background:#FAF9F6;border-radius:10px;padding:.65rem .8rem;margin-top:.8rem;line-height:1.45}
+.note.warn{background:#FFF6DD;color:#6B4E00}
+.ai-badge{font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;background:var(--green-mist);color:var(--green);white-space:nowrap}
+.ai-badge.gpt{background:#E8EEFF;color:#2A4BB5}
+.boosters{display:grid;grid-template-columns:repeat(6,1fr);gap:.8rem;margin-top:1rem}
+.bt{background:#FAF9F6;border-radius:14px;padding:.9rem 1rem}
+.bt .label{font-size:.84rem;font-weight:600;color:var(--ink-soft);line-height:1.3}
+.bt .bv{font-family:var(--display);font-weight:800;font-size:1.7rem;color:var(--hibiscus);line-height:1.1;margin:.3rem 0 .15rem}
+.bt .sub{font-size:.8rem}
+.login{position:fixed;inset:0;z-index:100;background:var(--green);display:grid;place-items:center;padding:1rem}
+.login[hidden]{display:none}
+.login-card{background:#fff;border-radius:24px;padding:2rem 1.8rem;width:min(400px,100%);text-align:center}
+.login-card svg{width:56px;height:56px;margin:0 auto .6rem}
+.login-card h1{font-family:var(--display);font-weight:800;font-size:1.9rem;color:var(--green);line-height:1.1}
+.login-card p{color:var(--ink-soft);margin:.4rem 0 1.2rem;font-size:.93rem}
+.login-card input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:.8rem 1rem;margin-bottom:.8rem}
+.login-card input:focus{outline:none;border-color:var(--green)}
+.login-card .btn{width:100%;justify-content:center}
+.login-msg{font-size:.88rem;margin-top:.8rem;text-align:left;line-height:1.45}
+.login-msg.bad{color:#B5381A}
+.login-msg ol{margin:.4rem 0 0 1.2rem}
+.pill.web{background:#E8EEFF;color:#2A4BB5}
+.pill.new{background:var(--gold);color:var(--green-deep)}
+.pill.done{background:#E1F5EA;color:#167A45}
+.st-btns{display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap}
+.st-btns button{font-size:.78rem;font-weight:700;padding:.25rem .6rem;border-radius:8px;border:1.5px solid var(--line);background:#fff}
+.st-btns button[data-st="confirmed"]{border-color:#2BB673;color:#167A45}
+.st-btns button[data-st="cancelled"]:hover{background:#FDE7E3;color:#B5381A}
+tr.is-new td{background:#FFFBEA}
+@media (max-width:1100px){.boosters{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:620px){.boosters{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:1100px){.span-3{grid-column:span 6}.span-4,.span-5,.span-7,.span-8{grid-column:span 12}.span-6{grid-column:span 12}}
+@media (max-width:620px){.span-3{grid-column:span 12}.seg button{padding:.45rem .7rem;font-size:.85rem}.kpi .val{font-size:2rem}.two{grid-template-columns:1fr}.chat{height:480px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#F5B72A"/><circle cx="24" cy="24" r="16" fill="#fff"/><path d="M13 26c0-6 5-10 11-10s11 4 11 10c0 4-5 7-11 7s-11-3-11-7z" fill="#E0662B"/><ellipse cx="29" cy="25" rx="5" ry="3.6" fill="#A0521D" transform="rotate(-25 29 25)"/></svg>
+      <div><b>Cynthia</b><span>Sales dashboard</span></div>
+    </div>
+    <div class="seg" role="group" aria-label="Time period" id="periods">
+      <button data-p="today">Today</button>
+      <button data-p="7">7 days</button>
+      <button data-p="30">30 days</button>
+      <button data-p="all">All time</button>
+    </div>
+    <button class="btn btn-ghost" id="settingsBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    <button class="btn btn-gold" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add order</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner info" id="loadingBanner">Loading your orders…</div>
+  <div class="banner demo" id="demoBanner" hidden><span>You're looking at <b>sample data</b> so you can see how the dashboard works. Nothing here is saved.</span><button class="btn btn-green" id="exitDemo">Show my real orders</button></div>
+  <div class="banner info" id="emptyBanner" hidden><span><b>No orders yet.</b> Paste a WhatsApp order or add a walk-in sale to get started, or try the dashboard with sample data first.</span><span style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn btn-line" id="tryDemo">Try with sample data</button><button class="btn btn-green" data-open-add>Add first order</button></span></div>
+  <div class="banner info" id="noDbBanner" hidden><span id="noDbText">Saving isn't available here. Open the dashboard from your Claude link while signed in to save orders. You can still explore it with sample data.</span><button class="btn btn-line" id="tryDemo2">Try with sample data</button></div>
+  <div class="banner info" id="localBanner" hidden><span><b>Computer copy.</b> Orders you add here are saved in this browser on this computer only. Use Settings to back them up or move them to your Claude link.</span></div>
+
+  <section class="grid" aria-label="Key numbers">
+    <div class="card kpi k1 span-3"><div class="label">Income</div><div class="val" id="kIncome">—</div><span class="delta flat" id="dIncome">—</span><svg class="spark" id="spark" viewBox="0 0 96 36" aria-hidden="true"></svg></div>
+    <div class="card kpi span-3"><div class="label">Orders</div><div class="val" id="kOrders">—</div><span class="delta flat" id="dOrders">—</span></div>
+    <div class="card kpi span-3"><div class="label">Average order</div><div class="val" id="kAvg">—</div><span class="delta flat" id="dAvg">—</span></div>
+    <div class="card kpi span-3"><div class="label">Items sold</div><div class="val" id="kItems">—</div><span class="delta flat" id="dItems">—</span></div>
+  </section>
+
+  <section class="grid">
+    <div class="card span-8">
+      <h2 id="incomeTitle">Income per day</h2>
+      <div class="sub" id="incomeSub">Hover a bar to see the day's orders and income.</div>
+      <div class="chart" id="incomeChart"></div>
+    </div>
+    <div class="card span-4">
+      <h2>Smart insights</h2>
+      <div class="sub">Worked out automatically from your orders.</div>
+      <ul class="insights" id="insights"></ul>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card span-6">
+      <h2>What customers are buying</h2>
+      <div class="sub">Top dishes by number sold in this period.</div>
+      <div class="hbars" id="topItems"></div>
+    </div>
+    <div class="card span-6">
+      <h2>Busiest hours</h2>
+      <div class="sub">Orders by time of day. Plan cooking and riders around the peaks.</div>
+      <div class="chart" id="hourChart"></div>
+      <div class="split">
+        <h3>Busiest days of the week</h3>
+        <div class="chart" id="dayChart"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card span-4">
+      <h2>Income by menu section</h2>
+      <div class="stack" id="catStack"></div>
+      <div class="legend" id="catLegend"></div>
+      <div class="split"><h3>How customers pay</h3><div class="stack" id="payStack"></div><div class="legend" id="payLegend"></div></div>
+      <div class="split"><h3>Delivery or pickup</h3><div class="stack" id="modeStack"></div><div class="legend" id="modeLegend"></div></div>
+    </div>
+    <div class="card span-4">
+      <h2>Tomorrow's forecast</h2>
+      <div class="sub" id="fcSub">Based on the same weekday in recent weeks.</div>
+      <div class="fc-big" id="fcIncome">—</div>
+      <div class="sub" id="fcOrders"></div>
+      <h3 style="font-size:.9rem;margin-top:1rem">Suggested prep</h3>
+      <ul class="prep" id="prep"></ul>
+    </div>
+    <div class="card span-4 chat" id="chatCard">
+      <h2>Ask about your sales <span class="ai-badge" id="aiBadge">Claude</span></h2>
+      <div class="sub" id="chatSub">Ask a question in plain words. The AI reads your order numbers to answer.</div>
+      <div class="chat-log" id="chatLog" aria-live="polite"></div>
+      <div class="chips" id="chips">
+        <button class="chip">What should I promote this week?</button>
+        <button class="chip">Which day needs extra staff?</button>
+        <button class="chip">How can I raise my average order?</button>
+      </div>
+      <form class="chat-form" id="chatForm"><input id="chatInput" placeholder="e.g. How did jollof do this week?" aria-label="Ask a question about your sales" autocomplete="off"><button class="btn btn-green" type="submit">Ask</button></form>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card span-12">
+      <h2>Sales boosters</h2>
+      <div class="sub">How the website's deals and offers are paying off in this period.</div>
+      <div class="boosters" id="boosters"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card span-12">
+      <h2>Orders <span class="sub" id="ordersCount" style="font-weight:500"></span></h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>When</th><th>Order</th><th>Customer</th><th>Items</th><th>Type</th><th>Payment</th><th style="text-align:right">Total</th><th></th></tr></thead>
+          <tbody id="orderRows"></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:1rem"><button class="btn btn-line" id="moreRows" hidden>Show more orders</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true">
+  <div class="dh"><h2 id="dTitle">Add an order</h2><button class="x" id="closeAdd" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="paste">Paste WhatsApp order</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="walk">Walk-in sale</button>
+  </div>
+  <div class="db" id="dBody"></div>
+  <div class="df" id="dFoot"></div>
+</aside>
+
+<aside class="drawer" id="settings" role="dialog" aria-modal="true" aria-labelledby="sTitle" aria-hidden="true">
+  <div class="dh"><h2 id="sTitle">Settings</h2><button class="x" id="closeSettings" aria-label="Close settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="db" id="sBody"></div>
+</aside>
+<div class="login" id="login" hidden>
+  <form class="login-card" id="loginForm">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#F5B72A"/><circle cx="24" cy="24" r="16" fill="#fff"/><path d="M13 26c0-6 5-10 11-10s11 4 11 10c0 4-5 7-11 7s-11-3-11-7z" fill="#E0662B"/><ellipse cx="29" cy="25" rx="5" ry="3.6" fill="#A0521D" transform="rotate(-25 29 25)"/></svg>
+    <h1>Admin login</h1>
+    <p>Cynthia Fast Foods sales dashboard</p>
+    <input type="password" id="loginPass" placeholder="Admin password" autocomplete="current-password" aria-label="Admin password" required>
+    <button class="btn btn-green" type="submit" id="loginBtn">Log in</button>
+    <div class="login-msg" id="loginMsg" aria-live="polite"></div>
+  </form>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>window.CFF_API = "/api/orders";</script>
+<script>
+/* ============================================================
+   MENU (keep in step with the website)
+   ============================================================ */
+const CUR = "GH₵";
+const CATS = {rice:"Rice dishes", local:"Local favourites", grill:"Burgers & wraps", sides:"Sides", drinks:"Drinks", deals:"Deals", other:"Other"};
+const CAT_COLORS = {rice:"#0E5A3A", local:"#F5B72A", grill:"#E8552B", sides:"#C8205E", drinks:"#5B8DEF", deals:"#7A4A2A", other:"#B9B2A8"};
+const MENU = [
+  ["jollof","rice","Jollof & grilled chicken",75],["fried-rice","rice","Fried rice & chicken",70],["assorted","rice","Assorted jollof",95],
+  ["waakye","local","Waakye special",60],["banku","local","Banku & grilled tilapia",120],["redred","local","Red red & plantain",45],
+  ["burger","grill","Cynthia's beef burger",65],["chicken-burger","grill","Crispy chicken burger",60],["shawarma","grill","Chicken shawarma",55],
+  ["kelewele","sides","Kelewele",25],["fries","sides","Fries",25],["yam","sides","Fried yam & pepper",30],
+  ["sobolo","drinks","Sobolo",15],["pineginger","drinks","Pineapple ginger",15],["soda","drinks","Chilled soda",12],["water","drinks","Bottled water",5],
+  ["family-box","deals","Family box (feeds 4)",340],
+  ["deal-jollof","deals","Jollof meal deal",100],["deal-burger","deals","Burger meal deal",90],["deal-shawarma","deals","Shawarma for two",115],
+  ["meal-addon","sides","Meal add-on: kelewele + sobolo",35,1],["bump","drinks","Sobolo (checkout deal)",10,1],["gift","sides","Kelewele (free reward)",0,1]
+].map(([id,cat,name,price,hidden]) => ({id,cat,name,price,hidden:!!hidden}));
+const isDeal = n => /meal deal|for two|family box/i.test(n);
+const isAddon = n => /^meal add-on/i.test(n);
+const isBump = n => /\(checkout deal\)/i.test(n);
+const isGift = n => /\(free reward\)/i.test(n);
+const byName = n => { const k = n.trim().toLowerCase(); return MENU.find(m => m.name.toLowerCase() === k) || (/\((checkout deal|free reward)\)$/.test(k) ? MENU.find(m => m.name.toLowerCase() === k.replace(/\s*\((checkout deal|free reward)\)$/, "")) : null); };
+const money = n => `${CUR} ${Math.round(n).toLocaleString("en-GH")}`;
+const DAY = 86400000;
+const WD = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const WDS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let db = null, canWrite = false, localMode = false;
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
+const API = (typeof window.CFF_API === "string" && /^https?:$/.test(location.protocol)) ? window.CFF_API : null;
+let apiMode = false, apiToken = "", knownIds = null, pollTimer = null;
+const ls = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+let aiSettings = Object.assign({provider:"claude", model:"gpt-5.6-luna"}, ls.get("cff-ai", {}));
+const OPENAI_MODELS = [["gpt-5.6-luna","GPT-5.6 Luna (fast, lowest cost)"],["gpt-5.6-terra","GPT-5.6 Terra (balanced)"],["gpt-5.6-sol","GPT-5.6 Sol (most capable)"],["chat-latest","Chat latest (same as ChatGPT app)"]];
+const getKey = () => ls.get("cff-openai-key", "");
+let realOrders = [], demo = false, demoOrders = [];
+let period = "7", showRows = 15;
+const orders = () => demo ? demoOrders : realOrders.filter(o => o.status !== "cancelled");
+
+/* ============================================================
+   SAMPLE DATA (in memory only, never saved)
+   ============================================================ */
+function makeDemo(){
+  let seed = 20261101; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = arr => { const t = arr.reduce((a,[,w]) => a+w, 0); let x = r()*t; for (const [v,w] of arr){ if ((x -= w) <= 0) return v; } return arr[0][0]; };
+  const mains = [["jollof",30],["fried-rice",16],["waakye",14],["assorted",8],["banku",6],["redred",6],["burger",9],["chicken-burger",6],["shawarma",11]];
+  const names = ["Ama","Kofi","Akosua","Kwame","Efua","Yaw","Abena","Kojo","Adwoa","Kwesi","Esi","Nana","Afia","Kwabena","Selorm","Dede","Naa","Elikem"];
+  const phones = Array.from({length:220}, () => "024" + String(Math.floor(r()*9e6+1e6)));
+  const out = []; const now = Date.now(); const today = new Date(); today.setHours(0,0,0,0);
+  for (let d = 69; d >= 0; d--){
+    const day = new Date(today.getTime() - d*DAY); const wd = day.getDay();
+    const growth = 1 + (69-d)/200;
+    let n = Math.round(([9,6,6,7,8,13,15][wd]) * growth * (0.8 + r()*0.4));
+    for (let i=0;i<n;i++){
+      const hour = pick([[8,3],[9,4],[10,5],[11,7],[12,11],[13,11],[14,6],[15,4],[16,6],[17,9],[18,8]]);
+      const ts = day.getTime() + hour*3600000 + Math.floor(r()*3600000);
+      if (ts > now) continue;
+      const items = {};
+      const add = (id,q=1) => items[id] = (items[id]||0) + q;
+      const online = r() >= 0.3;
+      if (r() < 0.04) add("family-box");
+      else if (r() < 0.14) add(pick([["deal-jollof",5],["deal-burger",3],["deal-shawarma",2]]));
+      else {
+        const m = pick(mains); add(m, r() < 0.3 ? 2 : 1);
+        if (r() < 0.25) add(pick(mains));
+        if (["burger","chicken-burger"].includes(m) && r() < 0.6) add("fries");
+        if (["jollof","redred","assorted"].includes(m) && r() < 0.45) add("kelewele");
+        if (r() < 0.12) add("yam");
+        if (online && r() < 0.22) add("meal-addon");
+        if (r() < 0.65) add(m === "jollof" || m === "waakye" ? pick([["sobolo",5],["soda",3],["water",1],["pineginger",2]]) : pick([["soda",4],["sobolo",3],["pineginger",2],["water",1]]), r()<0.3?2:1);
+      }
+      if (online && r() < 0.26) add("bump");
+      const its = Object.entries(items).map(([id,q]) => { const m = MENU.find(x => x.id === id); return {id, name:m.name, cat:m.cat, price:m.price, q}; });
+      const subtotal = its.reduce((s,i) => s + i.price*i.q, 0);
+      const walk = !online;
+      let discount = 0, promo = "";
+      if ((hour === 12 || hour === 13)) discount += Math.round(its.filter(i => i.cat === "rice").reduce((s,i) => s + i.price*i.q, 0) * 0.1);
+      if (online && r() < 0.05){ promo = "WELCOME10"; discount += Math.round((subtotal - discount) * 0.1); }
+      if (subtotal - discount >= 300){ const g = MENU.find(x => x.id === "gift"); its.push({id:"gift", name:g.name, cat:g.cat, price:0, q:1}); }
+      const mode = walk ? "walk-in" : (r() < 0.72 ? "delivery" : "pickup");
+      const fee = mode === "delivery" && subtotal - discount < 200 ? 15 : 0;
+      const ph = phones[Math.floor(Math.pow(r(),2.2)*phones.length)];
+      out.push({id:"demo"+out.length, ref: walk ? "Walk-in" : "CFF-" + Math.floor(r()*1679616).toString(36).toUpperCase().padStart(4,"0"),
+        ts, items:its, subtotal, fee, discount, promo, total:subtotal-discount+fee, mode, pay: r() < 0.62 ? "Mobile Money" : "Cash", source: walk ? "walk-in" : "whatsapp",
+        customer: walk ? "" : names[Math.floor(r()*names.length)], phone: walk ? "" : ph});
+    }
+  }
+  return out;
+}
+
+/* ============================================================
+   PERIOD MATH
+   ============================================================ */
+function windows(){
+  const now = Date.now(); const sod = new Date(); sod.setHours(0,0,0,0); const t0 = sod.getTime();
+  if (period === "today") return {cur:[t0, now], prev:[t0-DAY, now-DAY], label:"yesterday by this time"};
+  if (period === "all"){ const first = Math.min(now, ...orders().map(o => o.ts)); return {cur:[first, now], prev:null, label:""}; }
+  const n = +period; const start = t0 - (n-1)*DAY;
+  return {cur:[start, now], prev:[start - n*DAY, start], label:`previous ${n} days`};
+}
+const inWin = (o, w) => w && o.ts >= w[0] && o.ts < w[1] + 1;
+function stats(list){
+  const income = list.reduce((s,o) => s + o.total, 0);
+  const items = list.reduce((s,o) => s + o.items.reduce((a,i) => a + i.q, 0), 0);
+  return {income, orders:list.length, avg: list.length ? income/list.length : 0, items};
+}
+function itemStats(list){
+  const m = {};
+  list.forEach(o => o.items.forEach(i => { const k = i.name; m[k] = m[k] || {name:i.name, cat:i.cat || (byName(i.name)||{}).cat || "other", q:0, rev:0, orders:0}; m[k].q += i.q; m[k].rev += i.q*i.price; m[k].orders++; }));
+  return Object.values(m).sort((a,b) => b.q - a.q || b.rev - a.rev);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function setDelta(el, cur, prev, w){
+  if (!w.prev || prev === 0 && cur === 0){ el.className = "delta flat"; el.textContent = w.prev ? "No change" : "All your orders"; return; }
+  if (prev === 0){ el.className = "delta up"; el.textContent = `New vs ${w.label}`; return; }
+  const pct = (cur - prev) / prev * 100;
+  el.className = "delta " + (Math.abs(pct) < 1 ? "flat" : pct > 0 ? "up" : "down");
+  el.textContent = `${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(pct).toFixed(0)}% vs ${w.label}`;
+}
+
+function render(){
+  const all = orders(), w = windows();
+  const cur = all.filter(o => inWin(o, w.cur)), prev = w.prev ? all.filter(o => inWin(o, w.prev)) : [];
+  const s = stats(cur), p = stats(prev);
+  $("#kIncome").textContent = money(s.income);
+  $("#kOrders").textContent = s.orders.toLocaleString();
+  $("#kAvg").textContent = money(s.avg);
+  $("#kItems").textContent = s.items.toLocaleString();
+  setDelta($("#dIncome"), s.income, p.income, w); setDelta($("#dOrders"), s.orders, p.orders, w);
+  setDelta($("#dAvg"), s.avg, p.avg, w); setDelta($("#dItems"), s.items, p.items, w);
+
+  renderIncome(cur, w);
+  renderTop(cur, prev);
+  renderHours(cur);
+  renderStacks(cur);
+  renderForecast(all);
+  renderInsights(all, cur, prev, w);
+  renderBoosters(cur);
+  renderTable(cur);
+  renderBanners();
+}
+
+function renderBanners(){
+  const loading = !demo && loadState === "loading";
+  $("#loadingBanner").hidden = !loading;
+  $("#loadingBanner").textContent = loadSlow ? "Your orders can't be reached yet. Check your connection; the dashboard will update when they load." : "Loading your orders…";
+  $("#demoBanner").hidden = !demo;
+  $("#noDbBanner").hidden = demo || loadState !== "nodb";
+  $("#localBanner").hidden = demo || !localMode;
+  $("#emptyBanner").hidden = demo || loadState !== "ready" || realOrders.length > 0;
+  $("#addBtn").disabled = demo || !canWrite;
+  $("#addBtn").title = demo ? "Leave sample data to add real orders" : !canWrite ? "Saving isn't available in this view" : "";
+}
+
+/* ---------- Bar chart ---------- */
+const tip = $("#tip");
+function showTip(e, html){ tip.innerHTML = html; tip.classList.add("show"); const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 10); const y = Math.max(10, e.clientY - tip.offsetHeight - 12); tip.style.left = x + "px"; tip.style.top = y + "px"; }
+function hideTip(){ tip.classList.remove("show"); }
+function barChart(el, data, {height = 240, color = "#0E5A3A", highlight, fmt = v => v, labelEvery = 1, minimal = false} = {}){
+  el.innerHTML = "";
+  if (!data.length || data.every(d => !d.value)){ el.innerHTML = `<div class="empty-chart">No orders in this period yet.</div>`; return; }
+  const W = Math.max(280, el.clientWidth || 600), H = height, padL = minimal ? 4 : 52, padB = 26, padT = 10, padR = 6;
+  const max = Math.max(...data.map(d => d.value)) || 1;
+  const nice = (() => { const m = Math.pow(10, Math.floor(Math.log10(max))); return Math.ceil(max / m) * m; })();
+  const iw = W - padL - padR, ih = H - padT - padB, bw = iw / data.length, gap = Math.min(10, bw * 0.25);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+  if (!minimal){ for (let i=0;i<=4;i++){ const y = padT + ih - ih*i/4; svg += `<line class="gridline" x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}"/><g class="axis"><text x="${padL-8}" y="${y+4}" text-anchor="end">${fmt(nice*i/4)}</text></g>`; } }
+  data.forEach((d,i) => {
+    const h = d.value / (minimal ? max : nice) * ih, x = padL + i*bw + gap/2, y = padT + ih - h;
+    const c = highlight && highlight(d, i) ? (highlight(d,i) === true ? "#F5B72A" : highlight(d,i)) : color;
+    svg += `<rect class="bar" data-i="${i}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1,bw-gap).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="${Math.min(6,(bw-gap)/3).toFixed(1)}" fill="${c}"/>`;
+    if (i % labelEvery === 0) svg += `<g class="axis"><text x="${(x + (bw-gap)/2).toFixed(1)}" y="${H-8}" text-anchor="middle">${esc(d.label)}</text></g>`;
+  });
+  svg += `</svg>`;
+  el.innerHTML = svg;
+  el.querySelectorAll(".bar").forEach(b => {
+    const d = data[+b.dataset.i];
+    b.addEventListener("mousemove", e => showTip(e, d.tip));
+    b.addEventListener("mouseleave", hideTip);
+  });
+}
+
+function renderIncome(cur, w){
+  const [a, b] = w.cur; let data = [];
+  if (period === "today"){
+    $("#incomeTitle").textContent = "Income by hour today";
+    const hs0 = cur.map(o => new Date(o.ts).getHours()); for (let h = Math.min(7, ...hs0); h <= Math.max(20, ...hs0); h++){ const os = cur.filter(o => new Date(o.ts).getHours() === h); const v = os.reduce((s,o)=>s+o.total,0);
+      data.push({label: h%12 === 0 ? "12" + (h<12?"a":"p") : (h%12) + (h<12?"a":"p"), value:v, tip:`<b>${h}:00–${h}:59</b>${os.length} orders, ${money(v)}`}); }
+  } else {
+    const span = Math.ceil((b - a) / DAY);
+    const weekly = span > 90;
+    $("#incomeTitle").textContent = weekly ? "Income per week" : "Income per day";
+    const start = new Date(a); start.setHours(0,0,0,0);
+    const step = weekly ? 7*DAY : DAY;
+    for (let t = start.getTime(); t <= b; t += step){
+      const os = cur.filter(o => o.ts >= t && o.ts < t + step); const v = os.reduce((s,o)=>s+o.total,0);
+      const dt = new Date(t);
+      const lab = weekly ? dt.toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : (period === "7" ? WDS[dt.getDay()] : String(dt.getDate()));
+      data.push({label:lab, value:v, date:dt, tip:`<b>${weekly ? "Week of " : ""}${dt.toLocaleDateString("en-GB",{weekday: weekly ? undefined : "long", day:"numeric", month:"short"})}</b>${os.length} orders, ${money(v)}`});
+    }
+  }
+  const maxV = Math.max(...data.map(d => d.value));
+  const every = data.length > 20 ? Math.ceil(data.length / 15) : 1;
+  barChart($("#incomeChart"), data, {height:340, fmt: v => v >= 1000 ? (v/1000).toFixed(v%1000?1:0) + "k" : v, highlight: d => d.value === maxV && maxV > 0, labelEvery: every});
+  // sparkline
+  const vals = data.map(d => d.value), mx = Math.max(1, ...vals);
+  const pts = vals.map((v,i) => `${(i/(Math.max(1,vals.length-1))*92+2).toFixed(1)},${(34 - v/mx*30).toFixed(1)}`).join(" ");
+  $("#spark").innerHTML = vals.length > 1 ? `<polyline points="${pts}" fill="none" stroke="#F5B72A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` : "";
+}
+
+function renderTop(cur, prev){
+  const its = itemStats(cur).slice(0, 8), prevMap = Object.fromEntries(itemStats(prev).map(i => [i.name, i]));
+  const el = $("#topItems");
+  if (!its.length){ el.innerHTML = `<div class="empty-chart">No dishes sold in this period yet.</div>`; return; }
+  const max = its[0].q;
+  el.innerHTML = its.map((i, k) => {
+    const pv = prevMap[i.name]; const ch = pv && pv.q ? Math.round((i.q - pv.q)/pv.q*100) : null;
+    return `<div class="hrow" data-k="${k}"><span class="nm" title="${esc(i.name)}">${esc(i.name)}</span><span class="track"><span class="fill" style="width:${(i.q/max*100).toFixed(1)}%;background:${CAT_COLORS[i.cat]||"#0E5A3A"};animation-delay:${k*50}ms"></span></span><span class="num">${i.q} sold<small>${money(i.rev)}${ch !== null && period !== "all" ? ` · ${ch>=0?"+":""}${ch}%` : ""}</small></span></div>`;
+  }).join("");
+  el.querySelectorAll(".hrow").forEach(r => { const i = its[+r.dataset.k]; r.addEventListener("mousemove", e => showTip(e, `<b>${esc(i.name)}</b>${i.q} sold in ${i.orders} orders<br>${money(i.rev)} income<br>${esc(CATS[i.cat]||"")}`)); r.addEventListener("mouseleave", hideTip); });
+}
+
+function renderHours(cur){
+  const hs = cur.map(o => new Date(o.ts).getHours()); const hours = []; for (let h = Math.min(7, ...hs); h <= Math.max(20, ...hs); h++) hours.push(h);
+  const cnt = hours.map(h => cur.filter(o => new Date(o.ts).getHours() === h).length);
+  const mx = Math.max(...cnt);
+  barChart($("#hourChart"), hours.map((h,i) => ({label: (h%12||12) + (h<12?"am":"pm"), value:cnt[i], tip:`<b>${h}:00–${h}:59</b>${cnt[i]} orders`})),
+    {height:180, color:"#C8D9CE", highlight:(d) => d.value === mx && mx > 0 ? "#0E5A3A" : false, labelEvery: 2});
+  const order = [1,2,3,4,5,6,0];
+  const dc = order.map(d => cur.filter(o => new Date(o.ts).getDay() === d));
+  const dv = dc.map(os => os.reduce((s,o)=>s+o.total,0)); const dm = Math.max(...dv);
+  barChart($("#dayChart"), order.map((d,i) => ({label:WDS[d], value:dv[i], tip:`<b>${WD[d]}s</b>${dc[i].length} orders, ${money(dv[i])}`})),
+    {height:150, color:"#F7D98A", highlight:(d) => d.value === dm && dm > 0 ? "#E8552B" : false, minimal:true});
+}
+
+function stackInto(stackEl, legendEl, parts){
+  const total = parts.reduce((s,p) => s + p.v, 0);
+  if (!total){ stackEl.innerHTML = ""; legendEl.innerHTML = `<span style="color:var(--ink-soft)">No data yet</span>`; return; }
+  stackEl.innerHTML = parts.filter(p => p.v).map(p => `<span style="width:${(p.v/total*100).toFixed(2)}%;background:${p.c}" title="${esc(p.l)}"></span>`).join("");
+  legendEl.innerHTML = parts.filter(p => p.v).map(p => `<span><i style="background:${p.c}"></i>${esc(p.l)}<b>${Math.round(p.v/total*100)}%</b></span>`).join("");
+  [...stackEl.children].forEach((s, i) => { const p = parts.filter(p => p.v)[i]; s.addEventListener("mousemove", e => showTip(e, `<b>${esc(p.l)}</b>${p.tip || ""}`)); s.addEventListener("mouseleave", hideTip); });
+}
+function renderStacks(cur){
+  const cat = {}; cur.forEach(o => o.items.forEach(i => { const c = i.cat || (byName(i.name)||{}).cat || "other"; cat[c] = (cat[c]||0) + i.q*i.price; }));
+  stackInto($("#catStack"), $("#catLegend"), Object.keys(CATS).map(k => ({l:CATS[k], v:cat[k]||0, c:CAT_COLORS[k], tip: money(cat[k]||0)})));
+  const pay = {}; cur.forEach(o => pay[o.pay] = (pay[o.pay]||0) + 1);
+  stackInto($("#payStack"), $("#payLegend"), [["Mobile Money","#F5B72A"],["Cash","#0E5A3A"]].map(([l,c]) => ({l, v:pay[l]||0, c, tip:`${pay[l]||0} orders`})));
+  const mode = {}; cur.forEach(o => mode[o.mode] = (mode[o.mode]||0) + 1);
+  stackInto($("#modeStack"), $("#modeLegend"), [["delivery","Delivery","#E8552B"],["pickup","Pickup","#F5B72A"],["walk-in","Walk-in","#C8205E"]].map(([k,l,c]) => ({l, v:mode[k]||0, c, tip:`${mode[k]||0} orders`})));
+}
+
+/* ============================================================
+   THE ALGORITHM: forecast + insights
+   ============================================================ */
+function forecast(all){
+  const tm = new Date(); tm.setHours(0,0,0,0); const tomorrow = tm.getTime() + DAY; const wd = new Date(tomorrow).getDay();
+  const sameDays = [1,2,3,4].map(k => tomorrow - 7*k*DAY).filter(t => all.some(o => o.ts < t + DAY && o.ts >= t - 0));
+  let basis, days;
+  const daysWithData = sameDays.filter(t => all.some(o => o.ts >= t && o.ts < t + DAY));
+  if (daysWithData.length >= 2){ days = daysWithData; basis = `the last ${days.length} ${WD[wd]}s`; }
+  else { days = [1,2,3,4,5,6,7].map(k => tm.getTime() - (k-1)*DAY).filter(t => t <= Date.now()); basis = "the last 7 days"; }
+  const per = days.map(t => all.filter(o => o.ts >= t && o.ts < t + DAY));
+  const n = per.length || 1;
+  const income = per.reduce((s,os) => s + os.reduce((a,o) => a + o.total, 0), 0) / n;
+  const cnt = per.reduce((s,os) => s + os.length, 0) / n;
+  const q = {}; per.flat().forEach(o => o.items.forEach(i => q[i.name] = (q[i.name]||0) + i.q));
+  const prep = Object.entries(q).map(([name, v]) => ({name, q: Math.ceil(v / n * 1.1)})).sort((a,b) => b.q - a.q).slice(0, 5);
+  return {wd, income, cnt, prep, basis, hasData: all.length > 0};
+}
+function renderForecast(all){
+  const f = forecast(all);
+  $("#fcSub").textContent = f.hasData ? `For ${WD[f.wd]}, based on ${f.basis}.` : "Appears once you have a few days of orders.";
+  $("#fcIncome").textContent = f.hasData ? `About ${money(f.income)}` : "—";
+  $("#fcOrders").textContent = f.hasData ? `Around ${Math.round(f.cnt)} orders expected` : "";
+  $("#prep").innerHTML = f.prep.length ? f.prep.map(p => `<li><span>${esc(p.name)}</span><b>${p.q} portions</b></li>`).join("") : `<li style="color:var(--ink-soft);border:0">No suggestions yet.</li>`;
+}
+
+function insights(all, cur, prev, w){
+  const out = [];
+  if (!cur.length){ out.push({tone:"info", ic:"🍽️", t:"No orders in this period", p: all.length ? "Pick a longer period above to see insights." : "Add your first orders and insights will appear here automatically."}); return out; }
+  const its = itemStats(cur), pmap = Object.fromEntries(itemStats(prev).map(i => [i.name, i]));
+  const s = stats(cur);
+  // 1. best seller
+  const top = its[0]; const share = Math.round(top.rev / s.income * 100);
+  out.push({tone:"good", ic:"🏆", t:`${top.name} is your best seller`, p:`${top.q} sold, bringing in ${money(top.rev)} (${share}% of income). Keep it in stock at peak times.`});
+  // 2. rising star / falling
+  if (prev.length){
+    const moves = its.filter(i => pmap[i.name] && pmap[i.name].q >= 4 && i.q >= 4).map(i => ({...i, ch:(i.q - pmap[i.name].q)/pmap[i.name].q}));
+    const up = moves.sort((a,b) => b.ch - a.ch)[0];
+    if (up && up.ch > 0.15) out.push({tone:"good", ic:"📈", t:`${up.name} is picking up`, p:`Up ${Math.round(up.ch*100)}% on the ${w.label}. A good dish to feature on your status this week.`});
+    const down = moves.sort((a,b) => a.ch - b.ch)[0];
+    if (down && down.ch < -0.2) out.push({tone:"warn", ic:"📉", t:`${down.name} is slowing down`, p:`Down ${Math.round(-down.ch*100)}% on the ${w.label}. Check quality or try a small promo.`});
+  }
+  // 3. peak time
+  const hc = {}; cur.forEach(o => { const h = new Date(o.ts).getHours(); hc[h] = (hc[h]||0) + 1; });
+  const ph = Object.entries(hc).sort((a,b) => b[1] - a[1])[0];
+  if (ph){ const h = +ph[0]; out.push({tone:"info", ic:"⏰", t:`Busiest hour: ${h%12||12}${h<12?"am":"pm"}–${(h+1)%12||12}${h+1<12?"am":"pm"}`, p:`${Math.round(ph[1]/cur.length*100)}% of orders come in then. Have rice and chicken ready 30 minutes before.`}); }
+  // 4. bundle: items bought together
+  const pairs = {}; cur.forEach(o => { const ids = [...new Set(o.items.map(i => i.name))].sort(); for (let a=0;a<ids.length;a++) for (let b=a+1;b<ids.length;b++){ const k = ids[a] + "|" + ids[b]; pairs[k] = (pairs[k]||0) + 1; } });
+  const bp = Object.entries(pairs).sort((a,b) => b[1] - a[1])[0];
+  if (bp && bp[1] >= 3){ const [a,b] = bp[0].split("|"); const pa = (byName(a)||{}).price, pb = (byName(b)||{}).price;
+    out.push({tone:"idea", ic:"🤝", t:`${a} + ${b} sell together`, p:`Bought together in ${bp[1]} orders.${pa && pb ? ` Try a combo at ${money(Math.round((pa+pb)*0.9/5)*5)} (normally ${money(pa+pb)}).` : " Try offering them as a combo."}`}); }
+  // 5. free delivery threshold
+  const del = cur.filter(o => o.mode === "delivery"); const near = del.filter(o => o.subtotal >= 150 && o.subtotal < 200);
+  if (del.length >= 5 && near.length / del.length >= 0.15) out.push({tone:"idea", ic:"🛵", t:`${Math.round(near.length/del.length*100)}% of deliveries were just under free delivery`, p:`They spent GH₵150–199. Suggest a kelewele or drink at checkout to tip them over GH₵200.`});
+  // 6. average order idea
+  const drinkRate = cur.filter(o => o.items.some(i => (i.cat || (byName(i.name)||{}).cat) === "drinks")).length / cur.length;
+  if (drinkRate < 0.5) out.push({tone:"idea", ic:"🥤", t:`Only ${Math.round(drinkRate*100)}% of orders include a drink`, p:`Offering sobolo with every meal could add about ${money(cur.length*(0.6-drinkRate)*15)} in this period.`});
+  // 6b. boosters
+  const bs = boosterStats(cur);
+  if (bs.online >= 10 && bs.bumpRate > 0) out.push({tone:"good", ic:"🚀", t:`${Math.round(bs.bumpRate*100)}% of online orders took the checkout offer`, p:`Add-ons brought in ${money(bs.extra)} extra this period. Try a different drink in the offer to compare.`});
+  // 7. slow movers
+  const sold = new Set(its.map(i => i.name)); const none = MENU.filter(m => m.cat !== "deals" && !m.hidden && !sold.has(m.name));
+  if (none.length && cur.length >= 20) out.push({tone:"warn", ic:"🧊", t:`${none.length} dish${none.length>1?"es":""} didn't sell`, p:`${none.slice(0,3).map(m => m.name).join(", ")}${none.length>3?" and more":""}. Consider removing or promoting ${none.length>1?"them":"it"}.`});
+  // 8. repeat customers
+  const ph2 = {}; all.filter(o => o.phone).forEach(o => { const k = o.phone.replace(/\D/g,""); ph2[k] = (ph2[k]||0) + 1; });
+  const reps = Object.values(ph2).filter(v => v > 1).length, uniq = Object.keys(ph2).length;
+  if (uniq >= 5) out.push({tone:"good", ic:"💛", t:`${reps} of ${uniq} customers came back`, p:`${Math.round(reps/uniq*100)}% have ordered more than once. A loyalty stamp (6th meal free) could grow this.`});
+  return out.slice(0, 6);
+}
+function renderInsights(all, cur, prev, w){
+  $("#insights").innerHTML = insights(all, cur, prev, w).map(i => `<li class="ins ${i.tone}"><span class="ic" aria-hidden="true">${i.ic}</span><div><b>${esc(i.t)}</b><p>${esc(i.p)}</p></div></li>`).join("");
+}
+
+/* ---------- Table ---------- */
+function boosterStats(list){
+  const online = list.filter(o => o.source !== "walk-in");
+  let deals = {q:0, rev:0}, addons = {q:0, rev:0}, bumps = {orders:0, rev:0}, gifts = 0, disc = 0, codes = 0;
+  list.forEach(o => {
+    let hasBump = false;
+    o.items.forEach(i => {
+      if (isDeal(i.name)){ deals.q += i.q; deals.rev += i.q*i.price; }
+      if (isAddon(i.name)){ addons.q += i.q; addons.rev += i.q*i.price; }
+      if (isBump(i.name)){ hasBump = true; bumps.rev += i.q*i.price; }
+      if (isGift(i.name)) gifts += i.q;
+    });
+    if (hasBump) bumps.orders++;
+    disc += o.discount || 0; if (o.promo) codes++;
+  });
+  return {deals, addons, bumps, bumpRate: online.length ? bumps.orders / online.length : 0, online:online.length, gifts, disc, codes, extra: addons.rev + bumps.rev};
+}
+function renderBoosters(cur){
+  const b = boosterStats(cur);
+  const tile = (label, val, sub) => `<div class="bt"><div class="label">${label}</div><div class="bv">${val}</div><div class="sub">${sub}</div></div>`;
+  $("#boosters").innerHTML =
+    tile("Extra income from add-ons", money(b.extra), `"Make it a meal" and checkout offers`) +
+    tile("Meal deals sold", b.deals.q.toLocaleString(), `${money(b.deals.rev)} in sales`) +
+    tile("Made it a meal", b.addons.q.toLocaleString(), `${money(b.addons.rev)} extra`) +
+    tile("Took the checkout offer", `${Math.round(b.bumpRate*100)}%`, `${b.bumps.orders} of ${b.online} online orders`) +
+    tile("Free rewards given", b.gifts.toLocaleString(), `Free gifts on big orders`) +
+    tile("Discounts given", money(b.disc), `${b.codes} welcome code${b.codes === 1 ? "" : "s"} used`);
+}
+function renderTable(cur){
+  const rows = [...cur].sort((a,b) => b.ts - a.ts);
+  $("#ordersCount").textContent = rows.length ? `${rows.length} in this period${rows.length > showRows ? `, showing latest ${showRows}` : ""}` : "";
+  $("#orderRows").innerHTML = rows.length ? rows.slice(0, showRows).map(o => {
+    const d = new Date(o.ts);
+    return `<tr class="${o.status === "new" ? "is-new" : ""}"><td style="white-space:nowrap">${d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}<br><span style="color:var(--ink-soft);font-size:.84rem">${d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</span></td>
+      <td><span class="pill ${o.source === "walk-in" ? "walk" : o.source === "website" ? "web" : "wa"}">${esc(o.ref)}</span>${o.source === "website" ? `<br><span class="pill ${o.status === "new" ? "new" : "done"}" style="margin-top:.3rem">${o.status === "new" ? "New from website" : "Confirmed"}</span>${o.status === "new" && canWrite && !demo ? `<div class="st-btns"><button data-st="confirmed" data-sid="${esc(o.id)}">Confirm</button><button data-st="cancelled" data-sid="${esc(o.id)}">Cancel</button></div>` : ""}` : ""}</td>
+      <td>${esc(o.customer || "—")}${o.phone ? `<br><span style="color:var(--ink-soft);font-size:.84rem">${esc(o.phone)}</span>` : ""}${o.address ? `<br><span style="color:var(--ink-soft);font-size:.84rem">${esc(o.address)}</span>` : ""}${o.notes ? `<br><span style="font-size:.84rem">Note: ${esc(o.notes)}</span>` : ""}</td>
+      <td class="items">${o.items.map(i => `${i.q} × ${esc(i.name)}`).join("<br>")}</td>
+      <td>${esc(o.mode === "walk-in" ? "Walk-in" : o.mode === "pickup" ? "Pickup" : "Delivery")}</td>
+      <td><span class="pill ${o.pay === "Cash" ? "cash" : "mm"}">${esc(o.pay)}</span></td>
+      <td class="num">${money(o.total)}</td>
+      <td>${!demo && canWrite ? `<button class="del" data-del="${esc(o.id)}">Delete</button>` : ""}</td></tr>`;
+  }).join("") : `<tr><td colspan="8" class="empty-chart">No orders in this period.</td></tr>`;
+  $("#moreRows").hidden = rows.length <= showRows;
+}
+
+/* ============================================================
+   ADD ORDERS
+   ============================================================ */
+let tab = "paste", parsed = null, walk = {};
+function parseOrder(text){
+  const t = text.replace(/\r/g, "");
+  const items = [];
+  const re = /(\d+)\s*[x×]\s*(.+?)\s*[—–-]+\s*(?:GH[₵¢C]|GHS)?\s*([\d,]+(?:\.\d+)?)/gi; let m;
+  while ((m = re.exec(t))){
+    const q = +m[1], name = m[2].replace(/^[•*\-\s]+/,"").trim(), lineTotal = +m[3].replace(/,/g,"");
+    const menu = byName(name);
+    items.push({id: menu ? menu.id : name.toLowerCase().replace(/[^a-z0-9]+/g,"-"), name: menu ? menu.name : name, cat: menu ? menu.cat : "other", price: Math.round(lineTotal / q * 100) / 100, q});
+  }
+  const ref = (t.match(/\b(CFF-[A-Z0-9]{3,8})\b/i) || [])[1];
+  const totM = t.match(/Total:\s*(?:GH[₵¢C]|GHS)?\s*([\d,]+(?:\.\d+)?)\s*(?:\(([^)]+)\))?/i);
+  const feeM = t.match(/^(Delivery|Pickup):\s*(Free|(?:GH[₵¢C]|GHS)?\s*[\d,]+)/im);
+  const name = (t.match(/^Name:\s*(.+)$/im) || [])[1];
+  const phone = (t.match(/^Phone:\s*(.+)$/im) || [])[1];
+  const addr = (t.match(/^Address:\s*(.+)$/im) || [])[1];
+  const subtotal = items.reduce((s,i) => s + i.price*i.q, 0);
+  const discounts = []; const dre = /^(.+?):\s*-\s*(?:GH[₵¢C]|GHS)?\s*([\d,]+)/gim; let dm;
+  while ((dm = dre.exec(t))) discounts.push({label: dm[1].trim().slice(0,80), amount: +dm[2].replace(/,/g,"")});
+  const discount = discounts.reduce((s,d) => s + d.amount, 0);
+  const promoCode = ((discounts.find(d => /^code\s+/i.test(d.label)) || {}).label || "").replace(/^code\s+(\S+).*/i, "$1").toUpperCase();
+  const fee = feeM && !/free/i.test(feeM[2]) ? +feeM[2].replace(/[^\d.]/g,"") : 0;
+  const total = totM ? +totM[1].replace(/,/g,"") : subtotal - discount + fee;
+  const payRaw = totM && totM[2] ? totM[2] : (/cash/i.test(t) ? "Cash" : "Mobile Money");
+  return {ref: ref ? ref.toUpperCase() : null, items, subtotal, fee, total, discount, discounts, promo: promoCode,
+    mode: feeM ? feeM[1].toLowerCase() : (/pick it up/i.test(t) ? "pickup" : "delivery"),
+    pay: /cash/i.test(payRaw) ? "Cash" : "Mobile Money", customer: (name||"").trim().slice(0,60), phone: (phone||"").trim().slice(0,30), address:(addr||"").trim().slice(0,120)};
+}
+function localDT(ts){ const d = new Date(ts - new Date(ts).getTimezoneOffset()*60000); return d.toISOString().slice(0,16); }
+
+function renderDrawer(){
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  const body = $("#dBody"), foot = $("#dFoot");
+  if (tab === "paste"){
+    body.innerHTML = `<p class="help">Open the order in WhatsApp, press and hold the message, choose <b>Copy</b>, then paste it below. The dashboard reads the items, total and customer details for you.</p>
+      <textarea class="paste" id="pasteBox" placeholder="Hello Cynthia Fast Foods! New order CFF-AB12&#10;&#10;• 2 x Jollof & grilled chicken — GH₵ 150&#10;...">${esc(parsed ? parsed._text : "")}</textarea>
+      <div id="pv"></div>`;
+    const box = $("#pasteBox");
+    const update = () => { const txt = box.value; parsed = txt.trim() ? {...parseOrder(txt), _text: txt, ts: parsed && parsed.ts || Date.now()} : null; renderPreview(); };
+    box.addEventListener("input", update);
+    renderPreview();
+    foot.innerHTML = `<button class="btn btn-green" style="width:100%;justify-content:center" id="savePaste" disabled>Save order</button>`;
+    renderPreview();
+    setTimeout(() => box.focus(), 50);
+  } else {
+    const groups = ["rice","local","grill","sides","drinks","deals"];
+    body.innerHTML = `<p class="help">Tap + for each item the customer bought.</p>` + groups.map(g => `<div class="walk-cat">${CATS[g]}</div><div class="walk-list">${MENU.filter(m => m.cat === g && !m.hidden).map(m => `<div class="walk-item"><div><div class="n">${esc(m.name)}</div><div class="p">${money(m.price)}</div></div><div class="step"><button data-wdec="${m.id}" aria-label="Remove one ${esc(m.name)}">−</button><output>${walk[m.id]||0}</output><button data-winc="${m.id}" aria-label="Add one ${esc(m.name)}">+</button></div></div>`).join("")}</div>`).join("") +
+      `<div class="two"><div class="fld"><label for="wPay">Payment</label><select id="wPay"><option>Cash</option><option>Mobile Money</option></select></div><div class="fld"><label for="wTime">Time of sale</label><input id="wTime" type="datetime-local" value="${localDT(Date.now())}"></div></div>`;
+    renderWalkFoot();
+  }
+}
+function renderPreview(){
+  const pv = $("#pv"); if (!pv) return;
+  const btn = $("#savePaste");
+  if (!parsed){ pv.innerHTML = ""; if (btn) btn.disabled = true; return; }
+  const dup = parsed.ref && realOrders.some(o => o.ref === parsed.ref);
+  if (!parsed.items.length){ pv.innerHTML = `<p class="warnmsg">No items found. Make sure you pasted the whole order message, including the lines that start with a number and "x".</p>`; if (btn) btn.disabled = true; return; }
+  const calc = parsed.subtotal - (parsed.discount || 0) + parsed.fee;
+  pv.innerHTML = `<div class="preview">
+    <div class="row"><b>${esc(parsed.ref || "Order without number")}</b><span>${esc(parsed.customer || "")}</span></div>
+    ${parsed.items.map(i => `<div class="row"><span>${i.q} × ${esc(i.name)}${i.cat === "other" ? ' <span class="pill">not on menu</span>' : ""}</span><span>${money(i.q*i.price)}</span></div>`).join("")}
+    ${(parsed.discounts || []).map(d => `<div class="row" style="color:var(--hibiscus)"><span>${esc(d.label)}</span><span>−${money(d.amount)}</span></div>`).join("")}
+    <div class="row"><span>${parsed.mode === "pickup" ? "Pickup" : "Delivery"}</span><span>${parsed.fee ? money(parsed.fee) : "Free"}</span></div>
+    <div class="row tot"><span>Total (${esc(parsed.pay)})</span><span>${money(parsed.total)}</span></div>
+  </div>
+  <div class="fld"><label for="pTime">Time of order</label><input id="pTime" type="datetime-local" value="${localDT(parsed.ts)}"></div>
+  ${Math.abs(calc - parsed.total) > 1 ? `<p class="warnmsg">The items add up to ${money(calc)} but the message says ${money(parsed.total)}. The message total will be saved.</p>` : ""}
+  ${dup ? `<p class="warnmsg">Order ${esc(parsed.ref)} is already saved. Saving again will replace it.</p>` : `<p class="okmsg">Looks good. Check the details, then save.</p>`}`;
+  $("#pTime").addEventListener("change", e => { parsed.ts = new Date(e.target.value).getTime() || Date.now(); });
+  if (btn) btn.disabled = false;
+}
+function renderWalkFoot(){
+  const its = Object.entries(walk).filter(([,q]) => q > 0);
+  const total = its.reduce((s,[id,q]) => s + MENU.find(m => m.id === id).price*q, 0);
+  $("#dFoot").innerHTML = `<button class="btn btn-green" style="width:100%;justify-content:center" id="saveWalk" ${its.length ? "" : "disabled"}>${its.length ? `Save sale, ${money(total)}` : "Add items to save"}</button>`;
+}
+
+async function saveOrder(order, docId){
+  if (demo) return false;
+  if (apiMode){
+    const r = await apiFetch("PUT", "", {orders:[{id: docId, ...order}]});
+    if (!r || !r.ok){ toast("Couldn't save. Check your connection and try again."); return false; }
+    await loadApi(); return true;
+  }
+  if (localMode){
+    const all = ls.get("cff-orders", {}); all[docId] = order;
+    if (!ls.set("cff-orders", all)){ toast("This browser's storage is full or blocked. Back up and delete old orders."); return false; }
+    loadLocal(); return true;
+  }
+  if (!db || !canWrite) return false;
+  try {
+    await db.collection("orders").doc(docId).set(order);
+    return true;
+  } catch(e){
+    if (e && e.code === "invalid_argument"){ canWrite = false; renderBanners(); toast("You can view orders here but not save them."); }
+    else if (e && e.code === "quota_exceeded") toast("Storage is full. Delete some old orders, then try again.");
+    else toast("Couldn't save. Check your connection and try again.");
+    return false;
+  }
+}
+
+/* ============================================================
+   AI CHAT
+   ============================================================ */
+let sample = null, chatHistory = [], chatBusy = false;
+function summaryForAI(){
+  const all = orders(), now = Date.now(), d30 = all.filter(o => o.ts >= now - 30*DAY), d7 = all.filter(o => o.ts >= now - 7*DAY), p7 = all.filter(o => o.ts >= now - 14*DAY && o.ts < now - 7*DAY);
+  const daily = {}; d30.forEach(o => { const k = new Date(o.ts).toISOString().slice(0,10); daily[k] = daily[k] || {orders:0, income:0}; daily[k].orders++; daily[k].income += o.total; });
+  const hours = {}; d30.forEach(o => { const h = new Date(o.ts).getHours(); hours[h] = (hours[h]||0) + 1; });
+  const wdays = {}; d30.forEach(o => { const w = WD[new Date(o.ts).getDay()]; wdays[w] = wdays[w] || {orders:0, income:0}; wdays[w].orders++; wdays[w].income += o.total; });
+  const pick = list => itemStats(list).map(i => ({item:i.name, sold:i.q, income:i.rev}));
+  const w = windows(), cur = all.filter(o => inWin(o, w.cur)), prev = w.prev ? all.filter(o => inWin(o, w.prev)) : [];
+  return {
+    business: "Cynthia Fast Foods, a Ghanaian fast-food restaurant. Prices in GH₵ (Ghana cedis). Orders come via WhatsApp (delivery/pickup) and walk-ins.",
+    data_kind: demo ? "SAMPLE DATA for demonstration, not real sales" : "real recorded orders",
+    today: new Date().toDateString(),
+    menu: MENU.map(m => `${m.name} (${m.price})`),
+    all_time: {...stats(all), first_order: all.length ? new Date(Math.min(...all.map(o => o.ts))).toDateString() : null},
+    last_7_days: {...stats(d7), items: pick(d7)}, previous_7_days: {...stats(p7), items: pick(p7)},
+    last_30_days: {...stats(d30), items: pick(d30), by_day: daily, orders_by_hour: hours, by_weekday: wdays,
+      payment: d30.reduce((a,o) => (a[o.pay] = (a[o.pay]||0)+1, a), {}), type: d30.reduce((a,o) => (a[o.mode] = (a[o.mode]||0)+1, a), {})},
+    sales_boosters_this_period: boosterStats(cur),
+    automatic_insights: insights(all, cur, prev, w).map(i => `${i.t}: ${i.p}`),
+    tomorrow_forecast: (() => { const f = forecast(all); return {day: WD[f.wd], income: Math.round(f.income), orders: Math.round(f.cnt), prep: f.prep}; })()
+  };
+}
+function addMsg(role, text, cls=""){ const d = document.createElement("div"); d.className = `msg ${role} ${cls}`; d.textContent = text; $("#chatLog").appendChild(d); $("#chatLog").scrollTop = 1e9; return d; }
+async function ask(q){
+  q = q.trim(); if (!q || chatBusy) return;
+  const useGPT = aiSettings.provider === "openai";
+  if (useGPT && !getKey()){ addMsg("ai", "Add your OpenAI API key in Settings to chat with ChatGPT.", "err"); return; }
+  if (!useGPT && !sample){ addMsg("ai", IN_CLAUDE ? "The Claude chat isn't available in this view." : "Claude chat only works on your Claude link. To chat here, add your ChatGPT key in Settings.", "err"); return; }
+  chatBusy = true; addMsg("me", q); $("#chatInput").value = "";
+  const bubble = addMsg("ai", "Thinking…");
+  const system = `You are a friendly business advisor for a small restaurant owner. Answer using ONLY the sales data below. Be concrete with numbers (GH₵). Keep answers short: 2 to 6 sentences or a few bullet points, plain text, no markdown headings or tables. If the data can't answer the question, say so and suggest what to track. ${demo ? "Mention once that this is sample data." : ""}\n\nSALES DATA (JSON):\n${JSON.stringify(summaryForAI())}`;
+  const turns = chatHistory.slice(-5);
+  const messages = [];
+  [...turns, {q, a:null}].forEach((t, i) => {
+    messages.push({role:"user", content: i === 0 ? system + "\n\nQUESTION: " + t.q : t.q});
+    if (t.a !== null) messages.push({role:"assistant", content:t.a});
+  });
+  try {
+    const onText = ({text}) => { bubble.textContent = text; $("#chatLog").scrollTop = 1e9; };
+    if (useGPT){
+      const sys = messages[0].content.split("\n\nQUESTION: ");
+      const gptMsgs = [{role:"system", content: sys[0]}, {role:"user", content: sys.slice(1).join("\n\nQUESTION: ")}, ...messages.slice(1)];
+      bubble.textContent = await askOpenAI(gptMsgs, onText) || "No answer came back. Try asking again.";
+    } else {
+      const res = await sample(messages, {cache:false, onText});
+      bubble.textContent = (res && res.text) || bubble.textContent;
+    }
+    chatHistory.push({q, a: bubble.textContent});
+  } catch(e){
+    bubble.classList.add("err");
+    bubble.textContent = e && e.gpt ? e.message : e && e.code === "rate_limited" ? "Too many questions at once. Wait a minute and try again." : e && e.code === "not_granted" ? "The AI chat needs your permission. Allow it when asked, then try again." : "Couldn't get an answer just now. Try again in a moment.";
+    if (e && e.code === "not_granted") { sample = null; }
+  }
+  chatBusy = false;
+}
+
+/* ============================================================
+   CHATGPT (OpenAI) — key stays in this browser only
+   ============================================================ */
+function gptError(status, msg){
+  const m = status === 401 ? "OpenAI says this API key isn't valid. Check it in Settings."
+    : status === 429 ? "Your OpenAI account is out of credit or sending too many requests. Check billing at platform.openai.com."
+    : status === 404 || /model/i.test(msg || "") ? `The model "${aiSettings.model}" isn't available on your OpenAI account. Pick another in Settings.`
+    : status === 0 ? (IN_CLAUDE ? "ChatGPT can't connect from the Claude link. Open dashboard.html from your computer to use ChatGPT, or switch back to Claude in Settings." : "Couldn't reach OpenAI. Check your internet connection.")
+    : `OpenAI returned an error${msg ? ": " + msg : ""}.`;
+  return {gpt:true, message:m};
+}
+async function askOpenAI(messages, onText){
+  let res;
+  try {
+    res = await fetch("https://api.openai.com/v1/chat/completions", {method:"POST",
+      headers:{"Content-Type":"application/json", "Authorization":"Bearer " + getKey()},
+      body: JSON.stringify({model: aiSettings.model, messages, stream:true})});
+  } catch(e){ throw gptError(0); }
+  if (!res.ok){ let j = {}; try { j = await res.json(); } catch(e){} throw gptError(res.status, j.error && j.error.message); }
+  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", text = "";
+  for (;;){
+    const {done, value} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    const lines = buf.split("\n"); buf = lines.pop();
+    for (const l of lines){
+      if (!l.startsWith("data:")) continue;
+      const d = l.slice(5).trim(); if (!d || d === "[DONE]") continue;
+      try { const delta = JSON.parse(d).choices?.[0]?.delta?.content; if (delta){ text += delta; onText({text}); } } catch(e){}
+    }
+  }
+  return text;
+}
+async function testKey(key){
+  try {
+    const r = await fetch("https://api.openai.com/v1/models", {headers:{"Authorization":"Bearer " + key}});
+    if (r.ok) return {ok:true, msg:"Key works. ChatGPT is ready."};
+    let j = {}; try { j = await r.json(); } catch(e){}
+    return {ok:false, invalid: r.status === 401, msg: gptError(r.status, j.error && j.error.message).message};
+  } catch(e){ return {ok:false, msg: gptError(0).message}; }
+}
+function maskKey(k){ return k ? k.slice(0, 7) + "…" + k.slice(-4) : ""; }
+function updateAiBadge(){
+  const gpt = aiSettings.provider === "openai";
+  const b = $("#aiBadge"); b.textContent = gpt ? "ChatGPT" : "Claude"; b.className = "ai-badge" + (gpt ? " gpt" : "");
+  $("#chatSub").textContent = gpt
+    ? (getKey() ? `Answers by ChatGPT (${aiSettings.model}) using your OpenAI key.` : "Add your OpenAI key in Settings to start.")
+    : (sample ? "Ask a question in plain words. The AI reads your order numbers to answer." : IN_CLAUDE ? "The AI chat isn't available in this view." : "Add your ChatGPT key in Settings to use the AI chat here.");
+}
+
+/* ---------- Settings panel ---------- */
+function renderSettings(){
+  const key = getKey(), gpt = aiSettings.provider === "openai";
+  $("#sBody").innerHTML = `
+  <section class="set-sec">
+    <h3>AI assistant</h3>
+    <p class="help">Choose which AI answers questions in "Ask about your sales".</p>
+    <div class="choice-row">
+      <label class="choice"><input type="radio" name="prov" value="claude" ${gpt ? "" : "checked"}><span>Claude<small>Built in, no key needed</small></span></label>
+      <label class="choice"><input type="radio" name="prov" value="openai" ${gpt ? "checked" : ""}><span>ChatGPT<small>Uses your OpenAI key</small></span></label>
+    </div>
+    ${IN_CLAUDE ? `<p class="note warn">ChatGPT can't connect from the Claude link, because pages opened there can't reach outside websites. To use ChatGPT, open <b>dashboard.html</b> from the CFF folder on your computer.</p>` : ""}
+  </section>
+
+  <section class="set-sec">
+    <h3>OpenAI API key</h3>
+    <p class="help">Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>, then paste it below.</p>
+    ${key ? `<div class="status ok" id="keyStatus"><i></i><span>Key saved: ${esc(maskKey(key))}</span></div>
+      <div class="btn-row"><button class="btn btn-line btn-sm" id="testKey">Test key</button><button class="btn btn-line btn-sm" id="replaceKey">Replace key</button><button class="btn btn-line btn-sm" id="removeKey">Remove key</button></div>`
+    : `<div class="keyrow"><input id="keyInput" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" aria-label="OpenAI API key"><button class="btn btn-line btn-sm" id="toggleKey" type="button">Show</button></div>
+      <div class="btn-row"><button class="btn btn-green btn-sm" id="saveKey">Save key</button></div>
+      <div class="status" id="keyStatus" hidden><i></i><span></span></div>`}
+    <div class="fld"><label for="modelSel">ChatGPT model</label><select id="modelSel">${OPENAI_MODELS.map(([v,l]) => `<option value="${v}" ${aiSettings.model === v ? "selected" : ""}>${l}</option>`).join("")}${OPENAI_MODELS.some(([v]) => v === aiSettings.model) ? "" : `<option value="${esc(aiSettings.model)}" selected>${esc(aiSettings.model)}</option>`}<option value="__custom">Other model…</option></select></div>
+    <p class="note">Your key is stored only in this browser on this device. It's never added to your orders or shared with anyone who opens the dashboard. OpenAI charges your account for each question, so set a monthly spending limit in your OpenAI billing settings. Never put this key in the customer website.</p>
+  </section>
+
+  <section class="set-sec">
+    ${apiMode ? "" : ""}<h3>Back up or move orders</h3>
+    <p class="help">${localMode ? "Orders in this computer copy live in this browser only. Copy them to keep a backup, or paste them into the dashboard on your Claude link." : "Copy your orders to keep a backup, or to use them in the computer copy with ChatGPT."}</p>
+    <div class="btn-row"><button class="btn btn-line btn-sm" id="copyOrders" ${realOrders.length ? "" : "disabled"}>Copy all orders (${realOrders.length})</button>${!IN_CLAUDE ? `<button class="btn btn-line btn-sm" id="downloadOrders" ${realOrders.length ? "" : "disabled"}>Download backup file</button>` : ""}</div>
+    <div class="fld"><label for="importBox">Add orders from a backup</label><textarea class="paste" id="importBox" style="min-height:90px" placeholder="Paste copied orders here"></textarea></div>
+    <div class="btn-row"><button class="btn btn-green btn-sm" id="importOrders" ${canWrite ? "" : "disabled"}>Add these orders</button></div>
+    <div class="status" id="importStatus" hidden><i></i><span></span></div>
+  </section>`;
+
+  if (apiMode) $("#sBody").insertAdjacentHTML("beforeend", `<section class="set-sec"><h3>Admin login</h3><p class="help">You're logged in on this device. Log out on shared or borrowed devices.</p><button class="btn btn-line btn-sm" id="logoutBtn">Log out</button></section>`);
+  $("#sBody").querySelectorAll('input[name="prov"]').forEach(r => r.addEventListener("change", () => { aiSettings.provider = r.value; ls.set("cff-ai", aiSettings); updateAiBadge(); chatHistory = []; toast(r.value === "openai" ? "Chat now uses ChatGPT" : "Chat now uses Claude"); }));
+  $("#modelSel").addEventListener("change", e => {
+    let v = e.target.value;
+    if (v === "__custom"){ renderCustomModel(); return; }
+    aiSettings.model = v; ls.set("cff-ai", aiSettings); updateAiBadge();
+  });
+  const ki = $("#keyInput"); if (ki) ki.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("#saveKey").click(); } });
+}
+function renderCustomModel(){
+  const sel = $("#modelSel"), wrap = sel.parentElement;
+  wrap.innerHTML = `<label for="customModel">Model name</label><div class="keyrow"><input id="customModel" placeholder="e.g. gpt-5.6-terra" value="${esc(aiSettings.model)}" spellcheck="false"><button class="btn btn-green btn-sm" id="saveModel">Use</button></div>`;
+  $("#customModel").focus();
+}
+function setStatus(el, cls, msg){ el.hidden = false; el.className = "status " + cls; el.querySelector("span").textContent = msg; }
+function parseBackup(txt){
+  let arr; try { arr = JSON.parse(txt); } catch(e){ return null; }
+  if (!Array.isArray(arr)) arr = arr && Array.isArray(arr.orders) ? arr.orders : null;
+  if (!arr) return null;
+  return arr.slice(0, 3000).map(o => normalise({id: String(o.id || ("IMP-" + Math.random().toString(36).slice(2,9))).replace(/[^A-Za-z0-9_\-.~:@+]/g, "-").slice(0, 60), data: () => o})).filter(o => o.ts > 0 && o.items.length);
+}
+function openSettings(){ renderSettings(); $("#settings").classList.add("open"); $("#scrim").classList.add("open"); $("#settings").setAttribute("aria-hidden","false"); setTimeout(() => $("#closeSettings").focus(), 50); }
+function closeSettings(){ $("#settings").classList.remove("open"); $("#settings").setAttribute("aria-hidden","true"); if (!$("#drawer").classList.contains("open")) $("#scrim").classList.remove("open"); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.st && t.dataset.sid){
+    t.disabled = true; const r = await apiFetch("PATCH", "", {id: t.dataset.sid, status: t.dataset.st});
+    if (r && r.ok){ toast(t.dataset.st === "confirmed" ? "Order confirmed" : "Order cancelled"); loadApi(); } else { t.disabled = false; toast("Couldn't update. Try again."); }
+    return;
+  }
+  if (t.id === "logoutBtn"){ closeSettings(); logout(); return; }
+  if (t.id === "settingsBtn") openSettings();
+  else if (t.id === "closeSettings") closeSettings();
+  else if (t.id === "toggleKey"){ const i = $("#keyInput"); i.type = i.type === "password" ? "text" : "password"; t.textContent = i.type === "password" ? "Show" : "Hide"; }
+  else if (t.id === "saveKey"){
+    const k = $("#keyInput").value.trim(), st = $("#keyStatus");
+    if (!/^sk-[A-Za-z0-9_\-]{16,}$/.test(k)){ setStatus(st, "bad", "That doesn't look like an OpenAI key. It should start with sk- and be quite long."); return; }
+    if (!ls.set("cff-openai-key", k)){ setStatus(st, "bad", "This browser won't let the dashboard save the key."); return; }
+    aiSettings.provider = "openai"; ls.set("cff-ai", aiSettings); updateAiBadge(); chatHistory = [];
+    renderSettings(); const st2 = $("#keyStatus"); setStatus(st2, "wait", "Key saved. Checking it with OpenAI…");
+    const r = await testKey(k);
+    if (!r.ok && r.invalid){ ls.del("cff-openai-key"); aiSettings.provider = "claude"; ls.set("cff-ai", aiSettings); updateAiBadge(); renderSettings(); $("#keyInput").value = k; setStatus($("#keyStatus"), "bad", r.msg + " The key wasn't saved."); return; }
+    setStatus(st2, r.ok ? "ok" : "bad", r.ok ? `Key saved: ${maskKey(k)}. It works and ChatGPT is now answering your questions.` : `Key saved: ${maskKey(k)}. ${r.msg}`);
+  }
+  else if (t.id === "testKey"){ const st = $("#keyStatus"); setStatus(st, "wait", "Checking with OpenAI…"); const r = await testKey(getKey()); setStatus(st, r.ok ? "ok" : "bad", r.msg); }
+  else if (t.id === "replaceKey" || t.id === "removeKey"){
+    if (t.id === "removeKey" && !t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Tap again to remove"; return; }
+    ls.del("cff-openai-key"); if (t.id === "removeKey"){ aiSettings.provider = "claude"; ls.set("cff-ai", aiSettings); toast("Key removed. Chat uses Claude again."); }
+    updateAiBadge(); renderSettings(); if ($("#keyInput")) $("#keyInput").focus();
+  }
+  else if (t.id === "saveModel"){ const v = $("#customModel").value.trim(); if (!/^[A-Za-z0-9._:\-]{2,80}$/.test(v)){ toast("Enter a model name like gpt-5.6-terra"); return; } aiSettings.model = v; ls.set("cff-ai", aiSettings); updateAiBadge(); renderSettings(); toast(`ChatGPT model set to ${v}`); }
+  else if (t.id === "copyOrders"){
+    const txt = JSON.stringify(realOrders);
+    try { await navigator.clipboard.writeText(txt); toast(`${realOrders.length} orders copied`); }
+    catch(err){ const box = $("#importBox"); box.value = txt; box.select(); toast("Copy isn't allowed here. The orders are in the box below: select all and copy."); }
+  }
+  else if (t.id === "downloadOrders"){
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(realOrders, null, 1)], {type:"application/json"}));
+    a.download = `cynthia-orders-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+  }
+  else if (t.id === "importOrders"){
+    const st = $("#importStatus"), list = parseBackup($("#importBox").value);
+    if (!list){ setStatus(st, "bad", "That isn't an orders backup. Paste exactly what Copy all orders gave you."); return; }
+    if (!list.length){ setStatus(st, "bad", "No orders found in what you pasted."); return; }
+    const existing = new Set(realOrders.map(o => o.id)); const fresh = list.filter(o => !existing.has(o.id));
+    if (!fresh.length){ setStatus(st, "ok", "All of these orders are already here."); return; }
+    t.disabled = true; let done = 0;
+    if (localMode){ const all = ls.get("cff-orders", {}); fresh.forEach(o => { const {id, ...rest} = o; all[id] = rest; }); if (!ls.set("cff-orders", all)){ setStatus(st, "bad", "This browser's storage is full."); t.disabled = false; return; } done = fresh.length; loadLocal(); }
+    else if (apiMode){
+      for (let i = 0; i < fresh.length; i += 100){ setStatus(st, "wait", `Adding ${Math.min(i + 100, fresh.length)} of ${fresh.length}…`); const r = await apiFetch("PUT", "", {orders: fresh.slice(i, i + 100)}); if (!r || !r.ok) break; done = Math.min(i + 100, fresh.length); }
+      await loadApi();
+    }
+    else {
+      for (const o of fresh){ const {id, ...rest} = o; setStatus(st, "wait", `Adding ${done + 1} of ${fresh.length}…`);
+        if (!(await saveOrder(rest, id))) break; done++; if (done % 20 === 0) await new Promise(r => setTimeout(r, 1500)); }
+    }
+    setStatus(st, done === fresh.length ? "ok" : "bad", done === fresh.length ? `Added ${done} order${done === 1 ? "" : "s"}${list.length > fresh.length ? ` (${list.length - fresh.length} were already here)` : ""}.` : `Added ${done} of ${fresh.length}. Try again to add the rest.`);
+    if (done) $("#importBox").value = ""; t.disabled = false;
+  }
+});
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
+function openDrawer(){ if (demo || !canWrite) return; parsed = null; walk = {}; renderDrawer(); $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); $("#drawer").setAttribute("aria-hidden","false"); }
+function closeDrawer(){ $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); $("#drawer").setAttribute("aria-hidden","true"); }
+function setPeriod(p){ period = p; showRows = 15; document.querySelectorAll("#periods button").forEach(b => b.setAttribute("aria-pressed", b.dataset.p === p)); render(); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.p) setPeriod(t.dataset.p);
+  else if (t.id === "addBtn" || "openAdd" in t.dataset) openDrawer();
+  else if (t.id === "closeAdd") closeDrawer();
+  else if (t.dataset.tab){ tab = t.dataset.tab; renderDrawer(); }
+  else if (t.dataset.winc){ walk[t.dataset.winc] = (walk[t.dataset.winc]||0) + 1; t.parentElement.querySelector("output").textContent = walk[t.dataset.winc]; renderWalkFoot(); }
+  else if (t.dataset.wdec){ walk[t.dataset.wdec] = Math.max(0,(walk[t.dataset.wdec]||0) - 1); t.parentElement.querySelector("output").textContent = walk[t.dataset.wdec]; renderWalkFoot(); }
+  else if (t.id === "savePaste" && parsed && parsed.items.length){
+    t.disabled = true; t.textContent = "Saving…";
+    const {_text, ...o} = parsed;
+    const id = o.ref || ("WA-" + Date.now().toString(36).toUpperCase());
+    const ok = await saveOrder({...o, ref: o.ref || "WhatsApp", source:"whatsapp", status:"confirmed", ts: o.ts || Date.now(), savedAt: Date.now()}, id);
+    if (ok){ toast(`Order ${o.ref || ""} saved`); parsed = null; renderDrawer(); }
+    else { t.disabled = false; t.textContent = "Save order"; }
+  }
+  else if (t.id === "saveWalk"){
+    const its = Object.entries(walk).filter(([,q]) => q > 0).map(([id,q]) => { const m = MENU.find(x => x.id === id); return {id, name:m.name, cat:m.cat, price:m.price, q}; });
+    if (!its.length) return;
+    t.disabled = true; t.textContent = "Saving…";
+    const subtotal = its.reduce((s,i) => s + i.price*i.q, 0);
+    const ts = new Date($("#wTime").value).getTime() || Date.now();
+    const ok = await saveOrder({ref:"Walk-in", items:its, subtotal, fee:0, total:subtotal, mode:"walk-in", pay:$("#wPay").value, source:"walk-in", customer:"", phone:"", ts, savedAt:Date.now()}, "W-" + Date.now().toString(36).toUpperCase());
+    if (ok){ toast(`Walk-in sale saved, ${money(subtotal)}`); walk = {}; renderDrawer(); }
+    else renderWalkFoot();
+  }
+  else if (t.dataset.del){
+    if (!t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Sure?"; setTimeout(() => { if (t.isConnected){ t.classList.remove("sure"); t.textContent = "Delete"; } }, 3000); return; }
+    if (localMode){ const all = ls.get("cff-orders", {}); delete all[t.dataset.del]; ls.set("cff-orders", all); loadLocal(); toast("Order deleted"); return; }
+    if (apiMode){ const r = await apiFetch("DELETE", "?id=" + encodeURIComponent(t.dataset.del)); if (r && r.ok){ toast("Order deleted"); loadApi(); } else toast("Couldn't delete. Try again."); return; }
+    try { await db.collection("orders").doc(t.dataset.del).delete(); toast("Order deleted"); } catch(err){ toast("Couldn't delete. Try again."); }
+  }
+  else if (t.id === "tryDemo" || t.id === "tryDemo2"){ demo = true; demoOrders = makeDemo(); chatHistory = []; setPeriod("30"); window.scrollTo({top:0, behavior:"smooth"}); }
+  else if (t.id === "exitDemo"){ demo = false; chatHistory = []; setPeriod("7"); }
+  else if (t.classList.contains("chip")) ask(t.textContent);
+  else if (t.id === "moreRows"){ showRows += 25; render(); }
+});
+$("#scrim").addEventListener("click", () => { closeDrawer(); closeSettings(); });
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if ($("#settings").classList.contains("open")) closeSettings(); else if ($("#drawer").classList.contains("open")) closeDrawer(); });
+$("#chatForm").addEventListener("submit", e => { e.preventDefault(); ask($("#chatInput").value); });
+let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(render, 150); }).observe(document.querySelector("main"));
+
+/* ============================================================
+   CONNECT TO SAVED ORDERS
+   ============================================================ */
+let loadState = "loading", loadSlow = false;
+function normalise(snap){
+  const d = snap.data() || {};
+  const items = Array.isArray(d.items) ? d.items.filter(i => i && i.name).map(i => ({id:String(i.id||""), name:String(i.name), cat:String(i.cat || (byName(String(i.name))||{}).cat || "other"), price:+i.price || 0, q:Math.max(0, +i.q || 0)})) : [];
+  return {id:snap.id, ref:String(d.ref || snap.id), ts:+d.ts || 0, items, subtotal:+d.subtotal || 0, fee:+d.fee || 0, total:+d.total || 0,
+    mode:["delivery","pickup","walk-in"].includes(d.mode) ? d.mode : "delivery", pay: d.pay === "Cash" ? "Cash" : "Mobile Money",
+    source:String(d.source||""), customer:String(d.customer||""), phone:String(d.phone||""), discount:+d.discount || 0, promo:String(d.promo||"").slice(0,30),
+    status: ["new","confirmed","cancelled"].includes(d.status) ? d.status : "confirmed", address:String(d.address||"").slice(0,160), notes:String(d.notes||"").slice(0,300)};
+}
+function loadLocal(){
+  const all = ls.get("cff-orders", {});
+  realOrders = Object.entries(all).map(([id, d]) => normalise({id, data: () => d})).filter(o => o.ts > 0);
+  if (!demo) render(); else renderBanners();
+}
+function startLocal(){
+  const ok = ls.set("cff-probe", 1); ls.del("cff-probe");
+  if (!ok){ loadState = "nodb"; $("#noDbText").textContent = "This browser blocks saving. You can still explore the dashboard with sample data."; render(); return; }
+  localMode = true; canWrite = true; loadState = "ready"; loadLocal();
+}
+/* ---------- Live admin (website orders) ---------- */
+async function apiFetch(method, qs = "", body){
+  try {
+    const r = await fetch(API + qs, {method, headers: Object.assign({"Authorization": "Bearer " + apiToken}, body ? {"Content-Type":"application/json"} : {}), body: body ? JSON.stringify(body) : undefined, cache:"no-store"});
+    if (r.status === 401){ logout("Your password has changed or expired. Log in again."); return null; }
+    return r;
+  } catch(e){ return null; }
+}
+function showLogin(msg, bad = true){
+  $("#login").hidden = false; const m = $("#loginMsg"); m.className = "login-msg" + (bad ? " bad" : ""); m.innerHTML = msg || "";
+  setTimeout(() => $("#loginPass").focus(), 50);
+}
+function logout(msg){ ls.del("cff-admin-token"); apiToken = ""; apiMode = false; canWrite = false; clearInterval(pollTimer); realOrders = []; knownIds = null; render(); showLogin(msg ? esc(msg) : ""); }
+const NOT_SET_UP = `The admin password hasn't been set up yet. In Vercel:<ol><li>Open your <b>cynthia-fast-foods</b> project</li><li>Go to <b>Settings → Environment Variables</b></li><li>Add <b>ADMIN_PASSWORD</b> with a strong password, then save</li><li>Redeploy the latest deployment</li></ol>`;
+async function loadApi(first){
+  const r = await apiFetch("GET");
+  if (!r){ if (first) showLogin("Couldn't reach the server. Check your connection and try again."); else if (!loadSlow){ loadSlow = true; renderBanners(); } return false; }
+  if (r.status === 503){ showLogin(NOT_SET_UP); return false; }
+  if (!r.ok){ if (first) showLogin("Something went wrong loading orders. Try again in a minute."); return false; }
+  const data = await r.json().catch(() => ({orders:[]}));
+  const list = (data.orders || []).map(o => normalise({id: o.id, data: () => o})).filter(o => o.ts > 0);
+  if (knownIds){
+    const fresh = list.filter(o => !knownIds.has(o.id) && o.source === "website");
+    if (fresh.length){ toast(fresh.length === 1 ? `🔔 New website order ${fresh[0].ref} (${money(fresh[0].total)})` : `🔔 ${fresh.length} new website orders`); }
+  }
+  knownIds = new Set(list.map(o => o.id));
+  realOrders = list; loadSlow = false;
+  const newCount = list.filter(o => o.status === "new").length;
+  document.title = (newCount ? `(${newCount}) ` : "") + "Cynthia Fast Foods Admin";
+  if (!demo) render(); else renderBanners();
+  return true;
+}
+async function startApi(){
+  apiToken = ls.get("cff-admin-token", "");
+  if (!apiToken){ loadState = "loading"; render(); $("#loadingBanner").hidden = true; showLogin(""); return; }
+  apiMode = true; canWrite = true; loadState = "ready";
+  const ok = await loadApi(true);
+  if (!ok){ apiMode = false; canWrite = false; return; }
+  $("#login").hidden = true;
+  clearInterval(pollTimer); pollTimer = setInterval(() => { if (!document.hidden) loadApi(); }, 20000);
+}
+async function connect(){
+  if (API){
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && apiMode) loadApi(); });
+    $("#loginForm").addEventListener("submit", async e => {
+      e.preventDefault(); const pass = $("#loginPass").value; if (!pass) return;
+      const btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "Checking…";
+      apiToken = pass;
+      try {
+        const r = await fetch(API, {headers:{"Authorization":"Bearer " + pass}, cache:"no-store"});
+        if (r.status === 503) showLogin(NOT_SET_UP);
+        else if (r.status === 401) showLogin("That password isn't right. Try again.");
+        else if (r.ok){ ls.set("cff-admin-token", pass); $("#loginPass").value = ""; await startApi(); }
+        else showLogin("Something went wrong. Try again in a minute.");
+      } catch(err){ showLogin("Couldn't reach the server. Check your connection."); }
+      btn.disabled = false; btn.textContent = "Log in";
+    });
+    startApi(); return;
+  }
+  if (!IN_CLAUDE){ startLocal(); return; }
+  const timer = setTimeout(() => { loadSlow = true; renderBanners(); }, 10000);
+  try {
+    const [dbNs, user, smp] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("sample")]);
+    db = dbNs; sample = smp;
+    updateAiBadge();
+    if (!db){ clearTimeout(timer); loadState = "nodb"; render(); return; }
+    const cw = user ? await user.can("data.write") : null;
+    canWrite = cw !== false;
+    db.collection("orders").onSnapshot(snap => {
+      realOrders = snap.docs.filter(d => d.exists).map(normalise).filter(o => o.ts > 0);
+      if (!snap.metadata.fromCache){ clearTimeout(timer); loadSlow = false; }
+      loadState = "ready";
+      if (!demo) render(); else renderBanners();
+      if (parsed) renderPreview();
+    }, err => { clearTimeout(timer); loadState = err && err.code === "revoked" ? "nodb" : "ready"; if (err && err.code !== "revoked") toast("Lost connection to your orders. Reload the page to reconnect."); render(); });
+  } catch(e){ clearTimeout(timer); loadState = "nodb"; render(); }
+}
+
+setPeriod("7");
+updateAiBadge();
+connect();
+</script>
+</body>
+</html>

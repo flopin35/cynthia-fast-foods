@@ -929,7 +929,7 @@ function submitOrder(e){
   try { localStorage.setItem("cff-details", JSON.stringify({name:data.name, phone:data.phone, address:data.address})); } catch(err){}
   const pr = pricing(data.mode);
   const items = [...pr.lines, ...pr.gifts], fee = pr.fee, total = pr.total;
-  const ref = "CFF-" + Math.random().toString(36).slice(2,6).toUpperCase();
+  const ref = "CFF-" + (Math.random().toString(36).slice(2) + "0000").slice(0,4).toUpperCase();
   const lines = [
     `Hello ${BUSINESS.name}! New order ${ref}`, "",
     ...items.map(i => `• ${i.q} x ${i.name} — ${money(i.q*i.price)}`), "",
@@ -940,6 +940,13 @@ function submitOrder(e){
     data.mode === "delivery" ? `Address: ${data.address}` : "I will pick it up.",
     data.notes ? `Notes: ${data.notes}` : ""
   ].filter((l,i,a) => !(l === "" && a[i-1] === "")).join("\n").trim();
+  // Save the order to the admin panel (only works on the live website)
+  if (/^https?:$/.test(location.protocol)){
+    const payload = {ref, items: items.map(i => ({id:i.id, name:i.name, cat:i.cat, price:i.price, q:i.q})), discounts: pr.discounts.map(d => ({label:d.label, amount:d.amount})),
+      discount: pr.discounts.reduce((s2,d) => s2 + d.amount, 0), promo: promo ? promo.code : "", fee, total, mode:data.mode, pay:data.pay,
+      customer:data.name, phone:data.phone, address: data.mode === "delivery" ? data.address : "", notes:data.notes || ""};
+    try { fetch("/api/orders", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload), keepalive:true}).catch(() => {}); } catch(err){}
+  }
   if (promo){ lsSet("cff-welcome-used", true); promo = null; lsSet("cff-promo", null); }
   lastOrder = {ref, name:data.name, items, discounts:pr.discounts, fee, total, mode:data.mode, pay:data.pay, text:lines,
     waLink:`https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(lines)}`};

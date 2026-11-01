@@ -19,3 +19,9 @@ Commit a change to `main` and GitHub Pages republishes the site within a minute 
 ## Live site
 
 Hosted on Vercel: https://cynthia-fast-foods.vercel.app (redeploys automatically on every push to `main`).
+
+## Admin panel
+
+`/admin` is the sales dashboard. Orders placed on the website are saved through `api/orders.js` into a private Vercel Blob store (`cynthia-orders`) and show up in the admin panel automatically.
+
+The admin password is the `ADMIN_PASSWORD` environment variable in Vercel (Project → Settings → Environment Variables). Change it there and redeploy to change the password.
