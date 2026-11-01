@@ -940,13 +940,12 @@ function submitOrder(e){
     data.mode === "delivery" ? `Address: ${data.address}` : "I will pick it up.",
     data.notes ? `Notes: ${data.notes}` : ""
   ].filter((l,i,a) => !(l === "" && a[i-1] === "")).join("\n").trim();
-  // Save the order to the admin panel (only works on the live website)
-  if (/^https?:$/.test(location.protocol)){
-    const payload = {ref, items: items.map(i => ({id:i.id, name:i.name, cat:i.cat, price:i.price, q:i.q})), discounts: pr.discounts.map(d => ({label:d.label, amount:d.amount})),
-      discount: pr.discounts.reduce((s2,d) => s2 + d.amount, 0), promo: promo ? promo.code : "", fee, total, mode:data.mode, pay:data.pay,
-      customer:data.name, phone:data.phone, address: data.mode === "delivery" ? data.address : "", notes:data.notes || ""};
-    try { fetch("/api/orders", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload), keepalive:true}).catch(() => {}); } catch(err){}
-  }
+  // Save the order to the admin panel (Firebase). Only runs on the live website.
+  saveOrderOnline({ref, items: items.map(i => ({id:String(i.id||""), name:String(i.name), cat:String(i.cat||""), price:Number(i.price)||0, q:Number(i.q)||1})),
+    discounts: pr.discounts.map(d => ({label:String(d.label), amount:Number(d.amount)||0})), subtotal: pr.itemsTotal,
+    discount: pr.discounts.reduce((s2,d) => s2 + d.amount, 0), promo: promo ? promo.code : "", fee, total, mode:data.mode, pay:data.pay,
+    customer:String(data.name||"").slice(0,60), phone:String(data.phone||"").slice(0,30), address: data.mode === "delivery" ? String(data.address||"").slice(0,160) : "",
+    notes:String(data.notes||"").slice(0,300), source:"website", status:"new", ts: Date.now(), savedAt: Date.now()});
   if (promo){ lsSet("cff-welcome-used", true); promo = null; lsSet("cff-promo", null); }
   lastOrder = {ref, name:data.name, items, discounts:pr.discounts, fee, total, mode:data.mode, pay:data.pay, text:lines,
     waLink:`https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(lines)}`};
@@ -1040,6 +1039,28 @@ window.addEventListener("scroll", () => {
   if (!REDUCED) h.classList.toggle("tuck", y > lastY && y > 400 && !$("#drawer").classList.contains("open"));
   lastY = y;
 }, {passive:true});
+
+/* ============================================================
+   FIREBASE: sends each confirmed order to the admin panel
+   (these settings are safe to be public; access is controlled by Firestore rules)
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCeOcDkhFAhu4bIVTLS-WybJuFh_nkETbI",
+  authDomain: "cynthia-a3d2b.firebaseapp.com",
+  projectId: "cynthia-a3d2b",
+  storageBucket: "cynthia-a3d2b.firebasestorage.app",
+  messagingSenderId: "1066310885299",
+  appId: "1:1066310885299:web:d508e4944d01fffe18b5c6"
+};
+async function saveOrderOnline(order){
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const base = "https://www.gstatic.com/firebasejs/12.0.0/";
+    const [appM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-firestore.js")]);
+    const app = appM.getApps().length ? appM.getApp() : appM.initializeApp(FIREBASE_CONFIG);
+    await fsM.setDoc(fsM.doc(fsM.getFirestore(app), "orders", order.ref), order);
+  } catch(e){ console.warn("Order not saved to admin panel:", e && e.code || e); }
+}
 
 /* ============================================================
    BOOSTER LOGIC

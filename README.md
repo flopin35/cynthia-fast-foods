@@ -22,6 +22,8 @@ Hosted on Vercel: https://cynthia-fast-foods.vercel.app (redeploys automatically
 
 ## Admin panel
 
-`/admin` is the sales dashboard. Orders placed on the website are saved through `api/orders.js` into a private Vercel Blob store (`cynthia-orders`) and show up in the admin panel automatically.
+`/admin` is the sales dashboard. Orders placed on the website are saved to Firebase (Cloud Firestore, project `cynthia-a3d2b`, collection `orders`) and appear in the admin panel instantly.
 
-The admin password is the `ADMIN_PASSWORD` environment variable in Vercel (Project → Settings → Environment Variables). Change it there and redeploy to change the password.
+- Log in with the admin email and password created in Firebase → Authentication.
+- Who can read or change orders is controlled by the Firestore security rules (Firebase console → Firestore → Rules).
+- The admin panel keeps a copy of orders on the device, so it keeps working with a weak connection and syncs when back online.

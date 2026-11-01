@@ -366,7 +366,8 @@ tr.is-new td{background:#FFFBEA}
     <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#F5B72A"/><circle cx="24" cy="24" r="16" fill="#fff"/><path d="M13 26c0-6 5-10 11-10s11 4 11 10c0 4-5 7-11 7s-11-3-11-7z" fill="#E0662B"/><ellipse cx="29" cy="25" rx="5" ry="3.6" fill="#A0521D" transform="rotate(-25 29 25)"/></svg>
     <h1>Admin login</h1>
     <p>Cynthia Fast Foods sales dashboard</p>
-    <input type="password" id="loginPass" placeholder="Admin password" autocomplete="current-password" aria-label="Admin password" required>
+    <input type="email" id="loginEmail" placeholder="Admin email" autocomplete="username" aria-label="Admin email" required>
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
     <button class="btn btn-green" type="submit" id="loginBtn">Log in</button>
     <div class="login-msg" id="loginMsg" aria-live="polite"></div>
   </form>
@@ -374,7 +375,14 @@ tr.is-new td{background:#FFFBEA}
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script>window.CFF_API = "/api/orders";</script>
+<script>window.CFF_FIREBASE = {
+  apiKey: "AIzaSyCeOcDkhFAhu4bIVTLS-WybJuFh_nkETbI",
+  authDomain: "cynthia-a3d2b.firebaseapp.com",
+  projectId: "cynthia-a3d2b",
+  storageBucket: "cynthia-a3d2b.firebasestorage.app",
+  messagingSenderId: "1066310885299",
+  appId: "1:1066310885299:web:d508e4944d01fffe18b5c6"
+};</script>
 <script>
 /* ============================================================
    MENU (keep in step with the website)
@@ -409,8 +417,9 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
    ============================================================ */
 let db = null, canWrite = false, localMode = false;
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
-const API = (typeof window.CFF_API === "string" && /^https?:$/.test(location.protocol)) ? window.CFF_API : null;
-let apiMode = false, apiToken = "", knownIds = null, pollTimer = null;
+const FB = (window.CFF_FIREBASE && typeof window.CFF_FIREBASE === "object" && /^https?:$/.test(location.protocol)) ? window.CFF_FIREBASE : null;
+const FBV = "12.0.0";
+let apiMode = false, knownIds = null, fb = null, unsubOrders = null;
 const ls = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } },
@@ -839,9 +848,8 @@ function renderWalkFoot(){
 async function saveOrder(order, docId){
   if (demo) return false;
   if (apiMode){
-    const r = await apiFetch("PUT", "", {orders:[{id: docId, ...order}]});
-    if (!r || !r.ok){ toast("Couldn't save. Check your connection and try again."); return false; }
-    await loadApi(); return true;
+    fb.fs.setDoc(fb.fs.doc(fb.db, "orders", docId), clean(order)).catch(e => toast(fbErr(e, "Couldn't save the order.")));
+    return true;
   }
   if (localMode){
     const all = ls.get("cff-orders", {}); all[docId] = order;
@@ -1003,7 +1011,7 @@ function renderSettings(){
     <div class="status" id="importStatus" hidden><i></i><span></span></div>
   </section>`;
 
-  if (apiMode) $("#sBody").insertAdjacentHTML("beforeend", `<section class="set-sec"><h3>Admin login</h3><p class="help">You're logged in on this device. Log out on shared or borrowed devices.</p><button class="btn btn-line btn-sm" id="logoutBtn">Log out</button></section>`);
+  if (apiMode) $("#sBody").insertAdjacentHTML("beforeend", `<section class="set-sec"><h3>Admin login</h3><p class="help">You're logged in on this device. Orders are also kept on this device so the dashboard keeps working offline. Log out on shared or borrowed devices.</p><button class="btn btn-line btn-sm" id="logoutBtn">Log out</button></section>`);
   $("#sBody").querySelectorAll('input[name="prov"]').forEach(r => r.addEventListener("change", () => { aiSettings.provider = r.value; ls.set("cff-ai", aiSettings); updateAiBadge(); chatHistory = []; toast(r.value === "openai" ? "Chat now uses ChatGPT" : "Chat now uses Claude"); }));
   $("#modelSel").addEventListener("change", e => {
     let v = e.target.value;
@@ -1030,8 +1038,9 @@ function closeSettings(){ $("#settings").classList.remove("open"); $("#settings"
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.st && t.dataset.sid){
-    t.disabled = true; const r = await apiFetch("PATCH", "", {id: t.dataset.sid, status: t.dataset.st});
-    if (r && r.ok){ toast(t.dataset.st === "confirmed" ? "Order confirmed" : "Order cancelled"); loadApi(); } else { t.disabled = false; toast("Couldn't update. Try again."); }
+    t.disabled = true;
+    fb.fs.updateDoc(fb.fs.doc(fb.db, "orders", t.dataset.sid), {status: t.dataset.st, savedAt: Date.now()}).catch(e => toast(fbErr(e, "Couldn't update the order.")));
+    toast(t.dataset.st === "confirmed" ? "Order confirmed" : "Order cancelled");
     return;
   }
   if (t.id === "logoutBtn"){ closeSettings(); logout(); return; }
@@ -1073,8 +1082,14 @@ document.addEventListener("click", async e => {
     t.disabled = true; let done = 0;
     if (localMode){ const all = ls.get("cff-orders", {}); fresh.forEach(o => { const {id, ...rest} = o; all[id] = rest; }); if (!ls.set("cff-orders", all)){ setStatus(st, "bad", "This browser's storage is full."); t.disabled = false; return; } done = fresh.length; loadLocal(); }
     else if (apiMode){
-      for (let i = 0; i < fresh.length; i += 100){ setStatus(st, "wait", `Adding ${Math.min(i + 100, fresh.length)} of ${fresh.length}…`); const r = await apiFetch("PUT", "", {orders: fresh.slice(i, i + 100)}); if (!r || !r.ok) break; done = Math.min(i + 100, fresh.length); }
-      await loadApi();
+      try {
+        for (let i = 0; i < fresh.length; i += 400){
+          const batch = fb.fs.writeBatch(fb.db);
+          fresh.slice(i, i + 400).forEach(o => { const {id, ...rest} = o; batch.set(fb.fs.doc(fb.db, "orders", id), clean(rest)); });
+          setStatus(st, "wait", `Adding ${Math.min(i + 400, fresh.length)} of ${fresh.length}…`);
+          await batch.commit(); done = Math.min(i + 400, fresh.length);
+        }
+      } catch(e){ setStatus(st, "bad", fbErr(e, "Couldn't add the orders.")); }
     }
     else {
       for (const o of fresh){ const {id, ...rest} = o; setStatus(st, "wait", `Adding ${done + 1} of ${fresh.length}…`);
@@ -1122,7 +1137,7 @@ document.addEventListener("click", async e => {
   else if (t.dataset.del){
     if (!t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Sure?"; setTimeout(() => { if (t.isConnected){ t.classList.remove("sure"); t.textContent = "Delete"; } }, 3000); return; }
     if (localMode){ const all = ls.get("cff-orders", {}); delete all[t.dataset.del]; ls.set("cff-orders", all); loadLocal(); toast("Order deleted"); return; }
-    if (apiMode){ const r = await apiFetch("DELETE", "?id=" + encodeURIComponent(t.dataset.del)); if (r && r.ok){ toast("Order deleted"); loadApi(); } else toast("Couldn't delete. Try again."); return; }
+    if (apiMode){ fb.fs.deleteDoc(fb.fs.doc(fb.db, "orders", t.dataset.del)).catch(e => toast(fbErr(e, "Couldn't delete."))); toast("Order deleted"); return; }
     try { await db.collection("orders").doc(t.dataset.del).delete(); toast("Order deleted"); } catch(err){ toast("Couldn't delete. Try again."); }
   }
   else if (t.id === "tryDemo" || t.id === "tryDemo2"){ demo = true; demoOrders = makeDemo(); chatHistory = []; setPeriod("30"); window.scrollTo({top:0, behavior:"smooth"}); }
@@ -1157,64 +1172,77 @@ function startLocal(){
   if (!ok){ loadState = "nodb"; $("#noDbText").textContent = "This browser blocks saving. You can still explore the dashboard with sample data."; render(); return; }
   localMode = true; canWrite = true; loadState = "ready"; loadLocal();
 }
-/* ---------- Live admin (website orders) ---------- */
-async function apiFetch(method, qs = "", body){
-  try {
-    const r = await fetch(API + qs, {method, headers: Object.assign({"Authorization": "Bearer " + apiToken}, body ? {"Content-Type":"application/json"} : {}), body: body ? JSON.stringify(body) : undefined, cache:"no-store"});
-    if (r.status === 401){ logout("Your password has changed or expired. Log in again."); return null; }
-    return r;
-  } catch(e){ return null; }
+/* ---------- Live admin (Firebase) ---------- */
+const clean = o => JSON.parse(JSON.stringify(o));   // Firestore rejects undefined values
+function fbErr(e, fallback){
+  const c = (e && e.code) || "";
+  if (c.includes("permission-denied")) return "Firebase blocked this. Check the Firestore security rules and that you're logged in with the admin email.";
+  if (c.includes("unavailable")) return "You're offline. Changes are saved on this device and will sync when you're back online.";
+  if (c.includes("not-found") || c.includes("failed-precondition")) return "The Firestore database isn't set up yet. Create it in the Firebase console.";
+  return fallback + " Try again.";
+}
+async function fbLoad(){
+  if (fb) return fb;
+  const base = `https://www.gstatic.com/firebasejs/${FBV}/`;
+  const [appM, fsM, authM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-firestore.js"), import(base + "firebase-auth.js")]);
+  const app = appM.initializeApp(FB);
+  let db;
+  try { db = fsM.initializeFirestore(app, {localCache: fsM.persistentLocalCache({tabManager: fsM.persistentMultipleTabManager()})}); }
+  catch(e){ db = fsM.getFirestore(app); }
+  fb = {fs: fsM, authM, auth: authM.getAuth(app), db};
+  return fb;
 }
 function showLogin(msg, bad = true){
   $("#login").hidden = false; const m = $("#loginMsg"); m.className = "login-msg" + (bad ? " bad" : ""); m.innerHTML = msg || "";
-  setTimeout(() => $("#loginPass").focus(), 50);
+  setTimeout(() => ($("#loginEmail").value ? $("#loginPass") : $("#loginEmail")).focus(), 50);
 }
-function logout(msg){ ls.del("cff-admin-token"); apiToken = ""; apiMode = false; canWrite = false; clearInterval(pollTimer); realOrders = []; knownIds = null; render(); showLogin(msg ? esc(msg) : ""); }
-const NOT_SET_UP = `The admin password hasn't been set up yet. In Vercel:<ol><li>Open your <b>cynthia-fast-foods</b> project</li><li>Go to <b>Settings → Environment Variables</b></li><li>Add <b>ADMIN_PASSWORD</b> with a strong password, then save</li><li>Redeploy the latest deployment</li></ol>`;
-async function loadApi(first){
-  const r = await apiFetch("GET");
-  if (!r){ if (first) showLogin("Couldn't reach the server. Check your connection and try again."); else if (!loadSlow){ loadSlow = true; renderBanners(); } return false; }
-  if (r.status === 503){ showLogin(NOT_SET_UP); return false; }
-  if (!r.ok){ if (first) showLogin("Something went wrong loading orders. Try again in a minute."); return false; }
-  const data = await r.json().catch(() => ({orders:[]}));
-  const list = (data.orders || []).map(o => normalise({id: o.id, data: () => o})).filter(o => o.ts > 0);
-  if (knownIds){
-    const fresh = list.filter(o => !knownIds.has(o.id) && o.source === "website");
-    if (fresh.length){ toast(fresh.length === 1 ? `🔔 New website order ${fresh[0].ref} (${money(fresh[0].total)})` : `🔔 ${fresh.length} new website orders`); }
-  }
-  knownIds = new Set(list.map(o => o.id));
-  realOrders = list; loadSlow = false;
-  const newCount = list.filter(o => o.status === "new").length;
-  document.title = (newCount ? `(${newCount}) ` : "") + "Cynthia Fast Foods Admin";
-  if (!demo) render(); else renderBanners();
-  return true;
-}
-async function startApi(){
-  apiToken = ls.get("cff-admin-token", "");
-  if (!apiToken){ loadState = "loading"; render(); $("#loadingBanner").hidden = true; showLogin(""); return; }
-  apiMode = true; canWrite = true; loadState = "ready";
-  const ok = await loadApi(true);
-  if (!ok){ apiMode = false; canWrite = false; return; }
-  $("#login").hidden = true;
-  clearInterval(pollTimer); pollTimer = setInterval(() => { if (!document.hidden) loadApi(); }, 20000);
+function stopLive(){ if (unsubOrders){ unsubOrders(); unsubOrders = null; } apiMode = false; canWrite = false; realOrders = []; knownIds = null; }
+async function logout(msg){ try { await fb.authM.signOut(fb.auth); } catch(e){} stopLive(); render(); showLogin(msg ? esc(msg) : ""); }
+function startLive(){
+  apiMode = true; canWrite = true; loadState = "ready"; $("#login").hidden = true;
+  const timer = setTimeout(() => { if (!realOrders.length){ loadSlow = true; renderBanners(); } }, 10000);
+  unsubOrders = fb.fs.onSnapshot(fb.fs.collection(fb.db, "orders"), {includeMetadataChanges: false}, snap => {
+    clearTimeout(timer); loadSlow = false;
+    const list = snap.docs.map(normalise).filter(o => o.ts > 0);
+    if (knownIds){
+      const fresh = list.filter(o => !knownIds.has(o.id) && o.source === "website");
+      if (fresh.length) toast(fresh.length === 1 ? `🔔 New website order ${fresh[0].ref} (${money(fresh[0].total)})` : `🔔 ${fresh.length} new website orders`);
+    }
+    knownIds = new Set(list.map(o => o.id));
+    realOrders = list;
+    const newCount = list.filter(o => o.status === "new").length;
+    document.title = (newCount ? `(${newCount}) ` : "") + "Cynthia Fast Foods Admin";
+    if (!demo) render(); else renderBanners();
+    if (parsed) renderPreview();
+  }, err => {
+    clearTimeout(timer);
+    const c = (err && err.code) || "";
+    if (c.includes("permission-denied")){ stopLive(); render(); showLogin("You're logged in, but Firebase won't show the orders. Check that the Firestore security rules use this email as the admin."); }
+    else toast(fbErr(err, "Lost connection to your orders."));
+  });
 }
 async function connect(){
-  if (API){
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && apiMode) loadApi(); });
+  if (FB){
+    $("#loadingBanner").hidden = true;
+    try { await fbLoad(); }
+    catch(e){ showLogin("Couldn't load Firebase. Check your internet connection and refresh the page."); return; }
+    fb.authM.onAuthStateChanged(fb.auth, user => { if (user){ if (!apiMode) startLive(); } else { stopLive(); render(); showLogin(""); } });
     $("#loginForm").addEventListener("submit", async e => {
-      e.preventDefault(); const pass = $("#loginPass").value; if (!pass) return;
-      const btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "Checking…";
-      apiToken = pass;
-      try {
-        const r = await fetch(API, {headers:{"Authorization":"Bearer " + pass}, cache:"no-store"});
-        if (r.status === 503) showLogin(NOT_SET_UP);
-        else if (r.status === 401) showLogin("That password isn't right. Try again.");
-        else if (r.ok){ ls.set("cff-admin-token", pass); $("#loginPass").value = ""; await startApi(); }
-        else showLogin("Something went wrong. Try again in a minute.");
-      } catch(err){ showLogin("Couldn't reach the server. Check your connection."); }
+      e.preventDefault();
+      const email = $("#loginEmail").value.trim(), pass = $("#loginPass").value;
+      if (!email || !pass) return;
+      const btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "Logging in…";
+      try { await fb.authM.signInWithEmailAndPassword(fb.auth, email, pass); $("#loginPass").value = ""; }
+      catch(err){
+        const c = (err && err.code) || "";
+        showLogin(c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found") || c.includes("invalid-email") ? "That email or password isn't right. Try again."
+          : c.includes("operation-not-allowed") ? "Email/Password sign-in is turned off. Turn it on in Firebase → Authentication → Sign-in method."
+          : c.includes("too-many-requests") ? "Too many attempts. Wait a few minutes and try again."
+          : c.includes("network") ? "Couldn't reach Firebase. Check your connection." : "Couldn't log in. Try again.");
+      }
       btn.disabled = false; btn.textContent = "Log in";
     });
-    startApi(); return;
+    return;
   }
   if (!IN_CLAUDE){ startLocal(); return; }
   const timer = setTimeout(() => { loadSlow = true; renderBanners(); }, 10000);
