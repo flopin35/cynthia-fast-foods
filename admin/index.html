@@ -199,6 +199,16 @@ textarea.paste:focus,.fld input:focus,.fld select:focus{outline:none;border-colo
 .btn-sm{padding:.5rem .9rem;font-size:.88rem}
 .note{font-size:.84rem;color:var(--ink-soft);background:#FAF9F6;border-radius:10px;padding:.65rem .8rem;margin-top:.8rem;line-height:1.45}
 .note.warn{background:#FFF6DD;color:#6B4E00}
+.ai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.5rem;margin-top:.6rem}
+details.prov{border:1px solid var(--line);border-radius:12px;margin-top:.55rem;background:#fff}
+details.prov summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.7rem .85rem}
+details.prov summary::-webkit-details-marker{display:none}
+details.prov summary small{color:var(--ink-soft);font-size:.8rem;margin-left:.2rem}
+details.prov[open] summary{border-bottom:1px solid var(--line)}
+.kstate{font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;background:#F2EFE9;color:var(--ink-soft);white-space:nowrap}
+.kstate.on{background:#E1F5EA;color:#167A45}
+.prov-body{padding:.6rem .85rem .9rem}
+.prov-body .help{margin:.1rem 0 .55rem}
 .ai-badge{font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;background:var(--green-mist);color:var(--green);white-space:nowrap}
 .ai-badge.gpt{background:#E8EEFF;color:#2A4BB5}
 .boosters{display:grid;grid-template-columns:repeat(6,1fr);gap:.8rem;margin-top:1rem}
@@ -425,9 +435,10 @@ const ls = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } },
   del(k){ try { localStorage.removeItem(k); } catch(e){} }
 };
-let aiSettings = Object.assign({provider:"claude", model:"gpt-5.6-luna"}, ls.get("cff-ai", {}));
-const OPENAI_MODELS = [["gpt-5.6-luna","GPT-5.6 Luna (fast, lowest cost)"],["gpt-5.6-terra","GPT-5.6 Terra (balanced)"],["gpt-5.6-sol","GPT-5.6 Sol (most capable)"],["chat-latest","Chat latest (same as ChatGPT app)"]];
-const getKey = () => ls.get("cff-openai-key", "");
+let aiSettings = Object.assign({provider:"claude", models:{}}, ls.get("cff-ai", {}));
+aiSettings.models = aiSettings.models || {};
+if (aiSettings.model && !aiSettings.models.openai){ aiSettings.models.openai = aiSettings.model; delete aiSettings.model; }
+(() => { const old = ls.get("cff-openai-key", ""); if (old && !ls.get("cff-key-openai", "")){ ls.set("cff-key-openai", old); } if (old) ls.del("cff-openai-key"); })();
 let realOrders = [], demo = false, demoOrders = [];
 let period = "7", showRows = 15;
 const orders = () => demo ? demoOrders : realOrders.filter(o => o.status !== "cancelled");
@@ -896,57 +907,90 @@ function summaryForAI(){
 function addMsg(role, text, cls=""){ const d = document.createElement("div"); d.className = `msg ${role} ${cls}`; d.textContent = text; $("#chatLog").appendChild(d); $("#chatLog").scrollTop = 1e9; return d; }
 async function ask(q){
   q = q.trim(); if (!q || chatBusy) return;
-  const useGPT = aiSettings.provider === "openai";
-  if (useGPT && !getKey()){ addMsg("ai", "Add your OpenAI API key in Settings to chat with ChatGPT.", "err"); return; }
-  if (!useGPT && !sample){ addMsg("ai", IN_CLAUDE ? "The Claude chat isn't available in this view." : "Claude chat only works on your Claude link. To chat here, add your ChatGPT key in Settings.", "err"); return; }
+  const p = aiSettings.provider, P = PROVIDERS[p];
+  if (P && !getKey(p)){ addMsg("ai", `Add your ${P.name} API key in Settings to use it.`, "err"); return; }
+  if (!P && !sample){ addMsg("ai", IN_CLAUDE ? "The Claude chat isn't available in this view." : "Choose an AI in Settings and add its key to use the chat here.", "err"); return; }
   chatBusy = true; addMsg("me", q); $("#chatInput").value = "";
   const bubble = addMsg("ai", "Thinking…");
   const system = `You are a friendly business advisor for a small restaurant owner. Answer using ONLY the sales data below. Be concrete with numbers (GH₵). Keep answers short: 2 to 6 sentences or a few bullet points, plain text, no markdown headings or tables. If the data can't answer the question, say so and suggest what to track. ${demo ? "Mention once that this is sample data." : ""}\n\nSALES DATA (JSON):\n${JSON.stringify(summaryForAI())}`;
   const turns = chatHistory.slice(-5);
-  const messages = [];
-  [...turns, {q, a:null}].forEach((t, i) => {
-    messages.push({role:"user", content: i === 0 ? system + "\n\nQUESTION: " + t.q : t.q});
-    if (t.a !== null) messages.push({role:"assistant", content:t.a});
-  });
   try {
     const onText = ({text}) => { bubble.textContent = text; $("#chatLog").scrollTop = 1e9; };
-    if (useGPT){
-      const sys = messages[0].content.split("\n\nQUESTION: ");
-      const gptMsgs = [{role:"system", content: sys[0]}, {role:"user", content: sys.slice(1).join("\n\nQUESTION: ")}, ...messages.slice(1)];
-      bubble.textContent = await askOpenAI(gptMsgs, onText) || "No answer came back. Try asking again.";
+    if (P){
+      const msgs = [{role:"system", content:system}];
+      turns.forEach(t => { msgs.push({role:"user", content:t.q}); msgs.push({role:"assistant", content:t.a}); });
+      msgs.push({role:"user", content:q});
+      bubble.textContent = await aiChat(p, msgs, onText) || "No answer came back. Try asking again.";
     } else {
+      const messages = [];
+      [...turns, {q, a:null}].forEach((t, i) => { messages.push({role:"user", content: i === 0 ? system + "\n\nQUESTION: " + t.q : t.q}); if (t.a !== null) messages.push({role:"assistant", content:t.a}); });
       const res = await sample(messages, {cache:false, onText});
       bubble.textContent = (res && res.text) || bubble.textContent;
     }
     chatHistory.push({q, a: bubble.textContent});
   } catch(e){
     bubble.classList.add("err");
-    bubble.textContent = e && e.gpt ? e.message : e && e.code === "rate_limited" ? "Too many questions at once. Wait a minute and try again." : e && e.code === "not_granted" ? "The AI chat needs your permission. Allow it when asked, then try again." : "Couldn't get an answer just now. Try again in a moment.";
+    bubble.textContent = e && e.ai ? e.message : e && e.code === "rate_limited" ? "Too many questions at once. Wait a minute and try again." : e && e.code === "not_granted" ? "The AI chat needs your permission. Allow it when asked, then try again." : "Couldn't get an answer just now. Try again in a moment.";
     if (e && e.code === "not_granted") { sample = null; }
   }
   chatBusy = false;
 }
 
 /* ============================================================
-   CHATGPT (OpenAI) — key stays in this browser only
+   AI PROVIDERS: keys stay in this browser only
    ============================================================ */
-function gptError(status, msg){
-  const m = status === 401 ? "OpenAI says this API key isn't valid. Check it in Settings."
-    : status === 429 ? "Your OpenAI account is out of credit or sending too many requests. Check billing at platform.openai.com."
-    : status === 404 || /model/i.test(msg || "") ? `The model "${aiSettings.model}" isn't available on your OpenAI account. Pick another in Settings.`
-    : status === 0 ? (IN_CLAUDE ? "ChatGPT can't connect from the Claude link. Open dashboard.html from your computer to use ChatGPT, or switch back to Claude in Settings." : "Couldn't reach OpenAI. Check your internet connection.")
-    : `OpenAI returned an error${msg ? ": " + msg : ""}.`;
-  return {gpt:true, message:m};
+const PROVIDERS = {
+  openai:     {name:"ChatGPT", by:"OpenAI", kind:"oai", base:"https://api.openai.com/v1", hint:"sk-…", keyUrl:"https://platform.openai.com/api-keys",
+               def:"gpt-5.6-luna", models:[["gpt-5.6-luna","GPT-5.6 Luna (fast, low cost)"],["gpt-5.6-terra","GPT-5.6 Terra (balanced)"],["gpt-5.6-sol","GPT-5.6 Sol (most capable)"]]},
+  anthropic:  {name:"Claude API", by:"Anthropic", kind:"anthropic", hint:"sk-ant-…", keyUrl:"https://console.anthropic.com/settings/keys",
+               def:"claude-haiku-5-5", models:[["claude-haiku-5-5","Claude Haiku 5.5 (fast, low cost)"],["claude-sonnet-5-5","Claude Sonnet 5.5 (balanced)"],["claude-opus-5-5","Claude Opus 5.5 (most capable)"]]},
+  gemini:     {name:"Gemini", by:"Google", kind:"gemini", hint:"AIza…", keyUrl:"https://aistudio.google.com/apikey",
+               def:"gemini-flash-latest", models:[["gemini-flash-latest","Gemini Flash (latest)"]]},
+  deepseek:   {name:"DeepSeek", by:"DeepSeek", kind:"oai", base:"https://api.deepseek.com", hint:"sk-…", keyUrl:"https://platform.deepseek.com/api_keys",
+               def:"deepseek-chat", models:[["deepseek-chat","DeepSeek Chat"],["deepseek-reasoner","DeepSeek Reasoner"]]},
+  groq:       {name:"Groq", by:"Groq", kind:"oai", base:"https://api.groq.com/openai/v1", hint:"gsk_…", keyUrl:"https://console.groq.com/keys",
+               def:"openai/gpt-oss-120b", models:[["openai/gpt-oss-120b","GPT-OSS 120B"],["openai/gpt-oss-20b","GPT-OSS 20B (fastest)"]]},
+  openrouter: {name:"OpenRouter", by:"hundreds of models, one key", kind:"oai", base:"https://openrouter.ai/api/v1", hint:"sk-or-…", keyUrl:"https://openrouter.ai/keys",
+               def:"openrouter/auto", models:[["openrouter/auto","Auto (picks a good model for you)"]],
+               headers: () => ({"HTTP-Referer": location.origin, "X-Title": "Cynthia Fast Foods Admin"})}
+};
+const getKey = p => ls.get("cff-key-" + p, "");
+const modelFor = p => (aiSettings.models && aiSettings.models[p]) || PROVIDERS[p].def;
+const saveAi = () => ls.set("cff-ai", aiSettings);
+const maskKey = k => k ? k.slice(0, 6) + "…" + k.slice(-4) : "";
+const openProv = new Set();
+
+function aiError(p, status, msg){
+  const P = PROVIDERS[p], m = String(msg || "");
+  if (status === 401 || status === 403 || (status === 400 && /api key|api_key|credential/i.test(m))) return {ai:true, invalid:true, message:`${P.name} says this API key isn't valid. Check it in Settings.`};
+  if (status === 402 || status === 429) return {ai:true, message:`Your ${P.name} account is out of credit or sending too many requests. Check your billing with ${P.by === "hundreds of models, one key" ? "OpenRouter" : P.by}.`};
+  if (status === 404 || /model/i.test(m)) return {ai:true, message:`The model "${modelFor(p)}" isn't available on your ${P.name} account. Open Settings and pick another (tap "Load my models").`};
+  if (status === 0) return {ai:true, message: IN_CLAUDE ? `${P.name} can't connect from the Claude link. Use your admin panel on the website instead.` : `Couldn't reach ${P.name}. Check your internet connection. If it keeps failing, ${P.name} may not allow connections from websites; try OpenRouter, which gives access to the same models.`};
+  return {ai:true, message:`${P.name} returned an error${m ? ": " + m.slice(0, 160) : ""}.`};
 }
-async function askOpenAI(messages, onText){
-  let res;
+async function readErr(r){ try { const j = await r.json(); return (j.error && (j.error.message || j.error)) || j.message || ""; } catch(e){ return ""; } }
+
+async function aiChat(p, messages, onText){
+  const P = PROVIDERS[p], key = getKey(p), model = modelFor(p);
+  const system = messages.filter(m => m.role === "system").map(m => m.content).join("\n\n");
+  const turns = messages.filter(m => m.role !== "system");
+  let r;
   try {
-    res = await fetch("https://api.openai.com/v1/chat/completions", {method:"POST",
-      headers:{"Content-Type":"application/json", "Authorization":"Bearer " + getKey()},
-      body: JSON.stringify({model: aiSettings.model, messages, stream:true})});
-  } catch(e){ throw gptError(0); }
-  if (!res.ok){ let j = {}; try { j = await res.json(); } catch(e){} throw gptError(res.status, j.error && j.error.message); }
-  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", text = "";
+    if (P.kind === "oai"){
+      r = await fetch(P.base + "/chat/completions", {method:"POST", headers:Object.assign({"Content-Type":"application/json", "Authorization":"Bearer " + key}, P.headers ? P.headers() : {}),
+        body: JSON.stringify({model, messages, stream:true})});
+    } else if (P.kind === "anthropic"){
+      r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers:{"Content-Type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
+        body: JSON.stringify({model, max_tokens:1024, system, messages: turns})});
+    } else {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({systemInstruction:{parts:[{text:system}]}, contents: turns.map(m => ({role: m.role === "assistant" ? "model" : "user", parts:[{text:m.content}]}))})});
+    }
+  } catch(e){ throw aiError(p, 0); }
+  if (!r.ok) throw aiError(p, r.status, await readErr(r));
+  if (P.kind === "anthropic"){ const j = await r.json(); const t = (j.content || []).filter(c => c.type === "text").map(c => c.text).join(""); onText({text:t}); return t; }
+  if (P.kind === "gemini"){ const j = await r.json(); const t = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(x => x.text || "").join(""); onText({text:t}); return t; }
+  const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "", text = "";
   for (;;){
     const {done, value} = await reader.read(); if (done) break;
     buf += dec.decode(value, {stream:true});
@@ -959,72 +1003,130 @@ async function askOpenAI(messages, onText){
   }
   return text;
 }
-async function testKey(key){
+async function listModels(p, key){
+  const P = PROVIDERS[p]; let r;
   try {
-    const r = await fetch("https://api.openai.com/v1/models", {headers:{"Authorization":"Bearer " + key}});
-    if (r.ok) return {ok:true, msg:"Key works. ChatGPT is ready."};
-    let j = {}; try { j = await r.json(); } catch(e){}
-    return {ok:false, invalid: r.status === 401, msg: gptError(r.status, j.error && j.error.message).message};
-  } catch(e){ return {ok:false, msg: gptError(0).message}; }
+    if (P.kind === "oai") r = await fetch(P.base + "/models", {headers:Object.assign({"Authorization":"Bearer " + key}, P.headers ? P.headers() : {})});
+    else if (P.kind === "anthropic") r = await fetch("https://api.anthropic.com/v1/models?limit=100", {headers:{"x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"}});
+    else r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(key)}`);
+  } catch(e){ return {ok:false, ...aiError(p, 0)}; }
+  if (!r.ok){ const e = aiError(p, r.status, await readErr(r)); return {ok:false, ...e}; }
+  const j = await r.json().catch(() => ({}));
+  let ids = P.kind === "gemini" ? (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => String(m.name).replace(/^models\//, ""))
+          : (j.data || []).map(m => m.id);
+  if (p === "openai") ids = ids.filter(id => !/embedding|whisper|tts|dall-e|image|audio|realtime|moderation|transcribe|search|davinci|babbage/i.test(id));
+  ids = [...new Set(ids.filter(Boolean).map(String))].sort();
+  ls.set("cff-models-" + p, ids.slice(0, 600));
+  return {ok:true, count: ids.length};
 }
-function maskKey(k){ return k ? k.slice(0, 7) + "…" + k.slice(-4) : ""; }
 function updateAiBadge(){
-  const gpt = aiSettings.provider === "openai";
-  const b = $("#aiBadge"); b.textContent = gpt ? "ChatGPT" : "Claude"; b.className = "ai-badge" + (gpt ? " gpt" : "");
-  $("#chatSub").textContent = gpt
-    ? (getKey() ? `Answers by ChatGPT (${aiSettings.model}) using your OpenAI key.` : "Add your OpenAI key in Settings to start.")
-    : (sample ? "Ask a question in plain words. The AI reads your order numbers to answer." : IN_CLAUDE ? "The AI chat isn't available in this view." : "Add your ChatGPT key in Settings to use the AI chat here.");
+  const p = aiSettings.provider, P = PROVIDERS[p];
+  const b = $("#aiBadge"); b.textContent = P ? P.name : "Claude"; b.className = "ai-badge" + (P ? " gpt" : "");
+  $("#chatSub").textContent = P
+    ? (getKey(p) ? `Answers by ${P.name} (${modelFor(p)}). Switch AI any time in Settings.` : `Add your ${P.name} API key in Settings to start.`)
+    : (sample ? "Ask a question in plain words. The AI reads your order numbers to answer." : IN_CLAUDE ? "The AI chat isn't available in this view." : "Choose an AI and add its key in Settings to use the chat here.");
 }
 
 /* ---------- Settings panel ---------- */
+function providerCard(p){
+  const P = PROVIDERS[p], key = getKey(p), cur = modelFor(p), loaded = ls.get("cff-models-" + p, []);
+  const opts = [...P.models]; loaded.forEach(id => { if (!opts.some(([v]) => v === id)) opts.push([id, id]); });
+  if (!opts.some(([v]) => v === cur)) opts.unshift([cur, cur]);
+  return `<details class="prov" data-prov="${p}" ${aiSettings.provider === p || openProv.has(p) ? "open" : ""}>
+    <summary><span><b>${P.name}</b> <small>${esc(P.by)}</small></span><span class="kstate ${key ? "on" : ""}">${key ? "Key saved" : "No key"}</span></summary>
+    <div class="prov-body">
+      ${key ? `<div class="status ok" data-status="${p}"><i></i><span>Key saved: ${esc(maskKey(key))}</span></div>
+        <div class="btn-row"><button class="btn btn-line btn-sm" data-act="test" data-p="${p}">Test key</button><button class="btn btn-line btn-sm" data-act="replace" data-p="${p}">Replace key</button><button class="btn btn-line btn-sm" data-act="remove" data-p="${p}">Remove key</button></div>`
+      : `<p class="help">Get a key at <a href="${P.keyUrl}" target="_blank" rel="noopener">${P.keyUrl.replace(/^https:\/\//, "")}</a>, then paste it here.</p>
+        <div class="keyrow"><input type="password" data-keyin="${p}" placeholder="${P.hint}" autocomplete="off" spellcheck="false" aria-label="${P.name} API key"><button class="btn btn-line btn-sm" data-act="toggle" data-p="${p}" type="button">Show</button></div>
+        <div class="btn-row"><button class="btn btn-green btn-sm" data-act="save" data-p="${p}">Save key</button></div>
+        <div class="status" data-status="${p}" hidden><i></i><span></span></div>`}
+      <div class="fld"><label for="model-${p}">Model</label>
+        <select id="model-${p}" data-model="${p}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}<option value="__custom">Type a model name…</option></select></div>
+      ${key ? `<div class="btn-row"><button class="btn btn-line btn-sm" data-act="load" data-p="${p}">Load my models${loaded.length ? ` (${loaded.length})` : ""}</button></div>` : ""}
+    </div>
+  </details>`;
+}
 function renderSettings(){
-  const key = getKey(), gpt = aiSettings.provider === "openai";
+  const p = aiSettings.provider;
+  const tiles = [...(IN_CLAUDE ? [["claude", "Claude", "Built in, no key"]] : []), ...Object.entries(PROVIDERS).map(([id, P]) => [id, P.name, getKey(id) ? "Key saved ✓" : "Needs a key"])];
   $("#sBody").innerHTML = `
   <section class="set-sec">
     <h3>AI assistant</h3>
-    <p class="help">Choose which AI answers questions in "Ask about your sales".</p>
-    <div class="choice-row">
-      <label class="choice"><input type="radio" name="prov" value="claude" ${gpt ? "" : "checked"}><span>Claude<small>Built in, no key needed</small></span></label>
-      <label class="choice"><input type="radio" name="prov" value="openai" ${gpt ? "checked" : ""}><span>ChatGPT<small>Uses your OpenAI key</small></span></label>
-    </div>
-    ${IN_CLAUDE ? `<p class="note warn">ChatGPT can't connect from the Claude link, because pages opened there can't reach outside websites. To use ChatGPT, open <b>dashboard.html</b> from the CFF folder on your computer.</p>` : ""}
+    <p class="help">Choose which AI answers in "Ask about your sales". You can switch any time.</p>
+    <div class="ai-grid">${tiles.map(([id, name, sub]) => `<label class="choice"><input type="radio" name="prov" value="${id}" ${p === id ? "checked" : ""}><span>${name}<small>${sub}</small></span></label>`).join("")}</div>
+    ${IN_CLAUDE ? `<p class="note warn">On the Claude link only the built-in Claude works, because pages opened there can't reach outside AI services. Your other AIs work in the admin panel on your website.</p>` : ""}
   </section>
-
   <section class="set-sec">
-    <h3>OpenAI API key</h3>
-    <p class="help">Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>, then paste it below.</p>
-    ${key ? `<div class="status ok" id="keyStatus"><i></i><span>Key saved: ${esc(maskKey(key))}</span></div>
-      <div class="btn-row"><button class="btn btn-line btn-sm" id="testKey">Test key</button><button class="btn btn-line btn-sm" id="replaceKey">Replace key</button><button class="btn btn-line btn-sm" id="removeKey">Remove key</button></div>`
-    : `<div class="keyrow"><input id="keyInput" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" aria-label="OpenAI API key"><button class="btn btn-line btn-sm" id="toggleKey" type="button">Show</button></div>
-      <div class="btn-row"><button class="btn btn-green btn-sm" id="saveKey">Save key</button></div>
-      <div class="status" id="keyStatus" hidden><i></i><span></span></div>`}
-    <div class="fld"><label for="modelSel">ChatGPT model</label><select id="modelSel">${OPENAI_MODELS.map(([v,l]) => `<option value="${v}" ${aiSettings.model === v ? "selected" : ""}>${l}</option>`).join("")}${OPENAI_MODELS.some(([v]) => v === aiSettings.model) ? "" : `<option value="${esc(aiSettings.model)}" selected>${esc(aiSettings.model)}</option>`}<option value="__custom">Other model…</option></select></div>
-    <p class="note">Your key is stored only in this browser on this device. It's never added to your orders or shared with anyone who opens the dashboard. OpenAI charges your account for each question, so set a monthly spending limit in your OpenAI billing settings. Never put this key in the customer website.</p>
+    <h3>API keys and models</h3>
+    <p class="help">Add a key for each AI you want to use. Tap a name to open it.</p>
+    ${Object.keys(PROVIDERS).map(providerCard).join("")}
+    <p class="note">Keys are stored only in this browser on this device. They're never saved with your orders or shown to customers. Each AI company charges your account for every question, so set a monthly spending limit with each one. Never put a key in the customer website.</p>
   </section>
-
   <section class="set-sec">
-    ${apiMode ? "" : ""}<h3>Back up or move orders</h3>
-    <p class="help">${localMode ? "Orders in this computer copy live in this browser only. Copy them to keep a backup, or paste them into the dashboard on your Claude link." : "Copy your orders to keep a backup, or to use them in the computer copy with ChatGPT."}</p>
+    <h3>Back up or move orders</h3>
+    <p class="help">${localMode ? "Orders in this computer copy live in this browser only. Copy them to keep a backup, or paste them into your admin panel." : "Copy your orders to keep a backup, or to move them to another copy of the dashboard."}</p>
     <div class="btn-row"><button class="btn btn-line btn-sm" id="copyOrders" ${realOrders.length ? "" : "disabled"}>Copy all orders (${realOrders.length})</button>${!IN_CLAUDE ? `<button class="btn btn-line btn-sm" id="downloadOrders" ${realOrders.length ? "" : "disabled"}>Download backup file</button>` : ""}</div>
     <div class="fld"><label for="importBox">Add orders from a backup</label><textarea class="paste" id="importBox" style="min-height:90px" placeholder="Paste copied orders here"></textarea></div>
     <div class="btn-row"><button class="btn btn-green btn-sm" id="importOrders" ${canWrite ? "" : "disabled"}>Add these orders</button></div>
     <div class="status" id="importStatus" hidden><i></i><span></span></div>
   </section>`;
-
   if (apiMode) $("#sBody").insertAdjacentHTML("beforeend", `<section class="set-sec"><h3>Admin login</h3><p class="help">You're logged in on this device. Orders are also kept on this device so the dashboard keeps working offline. Log out on shared or borrowed devices.</p><button class="btn btn-line btn-sm" id="logoutBtn">Log out</button></section>`);
-  $("#sBody").querySelectorAll('input[name="prov"]').forEach(r => r.addEventListener("change", () => { aiSettings.provider = r.value; ls.set("cff-ai", aiSettings); updateAiBadge(); chatHistory = []; toast(r.value === "openai" ? "Chat now uses ChatGPT" : "Chat now uses Claude"); }));
-  $("#modelSel").addEventListener("change", e => {
-    let v = e.target.value;
-    if (v === "__custom"){ renderCustomModel(); return; }
-    aiSettings.model = v; ls.set("cff-ai", aiSettings); updateAiBadge();
-  });
-  const ki = $("#keyInput"); if (ki) ki.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("#saveKey").click(); } });
+
+  $("#sBody").querySelectorAll('input[name="prov"]').forEach(r => r.addEventListener("change", () => {
+    aiSettings.provider = r.value; saveAi(); updateAiBadge(); chatHistory = [];
+    const P = PROVIDERS[r.value];
+    toast(`Chat now uses ${P ? P.name : "Claude"}${P && !getKey(r.value) ? ". Add its key below." : ""}`);
+    renderSettings();
+    const d = $(`details[data-prov="${r.value}"]`); if (d){ d.open = true; if (!getKey(r.value)) d.scrollIntoView({block:"center", behavior:"smooth"}); }
+  }));
+  $("#sBody").querySelectorAll("details.prov").forEach(d => d.addEventListener("toggle", () => { d.open ? openProv.add(d.dataset.prov) : openProv.delete(d.dataset.prov); }));
+  $("#sBody").querySelectorAll("select[data-model]").forEach(sel => sel.addEventListener("change", () => {
+    const pp = sel.dataset.model;
+    if (sel.value === "__custom"){
+      sel.parentElement.innerHTML = `<label>Model name</label><div class="keyrow"><input data-custommodel="${pp}" value="${esc(modelFor(pp))}" spellcheck="false" aria-label="Model name"><button class="btn btn-green btn-sm" data-act="usemodel" data-p="${pp}">Use</button></div>`;
+      $(`input[data-custommodel="${pp}"]`).focus(); return;
+    }
+    aiSettings.models = Object.assign({}, aiSettings.models, {[pp]: sel.value}); saveAi(); updateAiBadge(); toast(`${PROVIDERS[pp].name} will use ${sel.value}`);
+  }));
+  $("#sBody").querySelectorAll("input[data-keyin]").forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $(`button[data-act="save"][data-p="${i.dataset.keyin}"]`).click(); } }));
 }
-function renderCustomModel(){
-  const sel = $("#modelSel"), wrap = sel.parentElement;
-  wrap.innerHTML = `<label for="customModel">Model name</label><div class="keyrow"><input id="customModel" placeholder="e.g. gpt-5.6-terra" value="${esc(aiSettings.model)}" spellcheck="false"><button class="btn btn-green btn-sm" id="saveModel">Use</button></div>`;
-  $("#customModel").focus();
+async function handleAiAction(t){
+  const p = t.dataset.p, act = t.dataset.act, P = PROVIDERS[p]; if (!P) return;
+  openProv.add(p);
+  const st = () => $(`[data-status="${p}"]`);
+  if (act === "toggle"){ const i = $(`input[data-keyin="${p}"]`); i.type = i.type === "password" ? "text" : "password"; t.textContent = i.type === "password" ? "Show" : "Hide"; }
+  else if (act === "save"){
+    const k = $(`input[data-keyin="${p}"]`).value.trim();
+    if (k.length < 20 || /\s/.test(k)){ setStatus(st(), "bad", `That doesn't look like a ${P.name} key. Copy the whole key with no spaces.`); return; }
+    t.disabled = true; setStatus(st(), "wait", `Checking the key with ${P.name}…`);
+    const r = await listModels(p, k);
+    if (!r.ok && r.invalid){ t.disabled = false; setStatus(st(), "bad", r.message + " The key wasn't saved."); return; }
+    ls.set("cff-key-" + p, k);
+    const hadKey = PROVIDERS[aiSettings.provider] && getKey(aiSettings.provider) && aiSettings.provider !== p;
+    if (!hadKey){ aiSettings.provider = p; saveAi(); }
+    chatHistory = []; updateAiBadge(); renderSettings();
+    setStatus(st(), r.ok ? "ok" : "bad", r.ok ? `Key saved: ${maskKey(k)}. It works${r.count ? `, and ${r.count} models are available` : ""}.${hadKey ? ` Select ${P.name} above to use it.` : ` The chat now uses ${P.name}.`}` : `Key saved: ${maskKey(k)}. ${r.message}`);
+  }
+  else if (act === "test" || act === "load"){
+    setStatus(st(), "wait", `Checking with ${P.name}…`);
+    const r = await listModels(p, getKey(p));
+    if (act === "load" && r.ok){ renderSettings(); setStatus(st(), "ok", `Loaded ${r.count} models from ${P.name}. Pick one from the list.`); const s = $(`select[data-model="${p}"]`); if (s) s.focus(); }
+    else setStatus(st(), r.ok ? "ok" : "bad", r.ok ? `Key works. ${P.name} is ready.` : r.message);
+  }
+  else if (act === "replace" || act === "remove"){
+    if (act === "remove" && !t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Tap again to remove"; return; }
+    ls.del("cff-key-" + p);
+    if (act === "remove"){ ls.del("cff-models-" + p); toast(`${P.name} key removed`); }
+    updateAiBadge(); renderSettings(); const d = $(`details[data-prov="${p}"]`); if (d) d.open = true; const i = $(`input[data-keyin="${p}"]`); if (i) i.focus();
+  }
+  else if (act === "usemodel"){
+    const v = $(`input[data-custommodel="${p}"]`).value.trim();
+    if (!/^[A-Za-z0-9._:\/\-]{2,100}$/.test(v)){ toast("Enter a model name, for example " + P.def); return; }
+    aiSettings.models = Object.assign({}, aiSettings.models, {[p]: v}); saveAi(); updateAiBadge(); renderSettings(); toast(`${P.name} will use ${v}`);
+  }
 }
+
 function setStatus(el, cls, msg){ el.hidden = false; el.className = "status " + cls; el.querySelector("span").textContent = msg; }
 function parseBackup(txt){
   let arr; try { arr = JSON.parse(txt); } catch(e){ return null; }
@@ -1046,24 +1148,7 @@ document.addEventListener("click", async e => {
   if (t.id === "logoutBtn"){ closeSettings(); logout(); return; }
   if (t.id === "settingsBtn") openSettings();
   else if (t.id === "closeSettings") closeSettings();
-  else if (t.id === "toggleKey"){ const i = $("#keyInput"); i.type = i.type === "password" ? "text" : "password"; t.textContent = i.type === "password" ? "Show" : "Hide"; }
-  else if (t.id === "saveKey"){
-    const k = $("#keyInput").value.trim(), st = $("#keyStatus");
-    if (!/^sk-[A-Za-z0-9_\-]{16,}$/.test(k)){ setStatus(st, "bad", "That doesn't look like an OpenAI key. It should start with sk- and be quite long."); return; }
-    if (!ls.set("cff-openai-key", k)){ setStatus(st, "bad", "This browser won't let the dashboard save the key."); return; }
-    aiSettings.provider = "openai"; ls.set("cff-ai", aiSettings); updateAiBadge(); chatHistory = [];
-    renderSettings(); const st2 = $("#keyStatus"); setStatus(st2, "wait", "Key saved. Checking it with OpenAI…");
-    const r = await testKey(k);
-    if (!r.ok && r.invalid){ ls.del("cff-openai-key"); aiSettings.provider = "claude"; ls.set("cff-ai", aiSettings); updateAiBadge(); renderSettings(); $("#keyInput").value = k; setStatus($("#keyStatus"), "bad", r.msg + " The key wasn't saved."); return; }
-    setStatus(st2, r.ok ? "ok" : "bad", r.ok ? `Key saved: ${maskKey(k)}. It works and ChatGPT is now answering your questions.` : `Key saved: ${maskKey(k)}. ${r.msg}`);
-  }
-  else if (t.id === "testKey"){ const st = $("#keyStatus"); setStatus(st, "wait", "Checking with OpenAI…"); const r = await testKey(getKey()); setStatus(st, r.ok ? "ok" : "bad", r.msg); }
-  else if (t.id === "replaceKey" || t.id === "removeKey"){
-    if (t.id === "removeKey" && !t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Tap again to remove"; return; }
-    ls.del("cff-openai-key"); if (t.id === "removeKey"){ aiSettings.provider = "claude"; ls.set("cff-ai", aiSettings); toast("Key removed. Chat uses Claude again."); }
-    updateAiBadge(); renderSettings(); if ($("#keyInput")) $("#keyInput").focus();
-  }
-  else if (t.id === "saveModel"){ const v = $("#customModel").value.trim(); if (!/^[A-Za-z0-9._:\-]{2,80}$/.test(v)){ toast("Enter a model name like gpt-5.6-terra"); return; } aiSettings.model = v; ls.set("cff-ai", aiSettings); updateAiBadge(); renderSettings(); toast(`ChatGPT model set to ${v}`); }
+  else if (t.dataset.act && t.dataset.p) handleAiAction(t);
   else if (t.id === "copyOrders"){
     const txt = JSON.stringify(realOrders);
     try { await navigator.clipboard.writeText(txt); toast(`${realOrders.length} orders copied`); }
@@ -1269,6 +1354,7 @@ async function connect(){
 }
 
 setPeriod("7");
+if (!IN_CLAUDE && !PROVIDERS[aiSettings.provider]){ const withKey = Object.keys(PROVIDERS).find(getKey); if (withKey){ aiSettings.provider = withKey; saveAi(); } }
 updateAiBadge();
 connect();
 </script>
