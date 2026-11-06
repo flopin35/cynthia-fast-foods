@@ -1,0 +1,150 @@
+{
+ "restaurant": "Cynthia Fast Foods",
+ "currency": "GHS",
+ "updated": "2026-11-06",
+ "items": [
+  {
+   "id": "deal-jollof",
+   "category": "Meal deals",
+   "name": "Jollof meal deal",
+   "description": "Jollof & grilled chicken with kelewele and a chilled sobolo.",
+   "price": 100,
+   "was": 115
+  },
+  {
+   "id": "deal-burger",
+   "category": "Meal deals",
+   "name": "Burger meal deal",
+   "description": "Cynthia's beef burger with fries and a chilled soda.",
+   "price": 90,
+   "was": 102
+  },
+  {
+   "id": "deal-shawarma",
+   "category": "Meal deals",
+   "name": "Shawarma for two",
+   "description": "Two chicken shawarmas and two chilled sodas to share.",
+   "price": 115,
+   "was": 134
+  },
+  {
+   "id": "jollof",
+   "category": "Rice dishes",
+   "name": "Jollof & grilled chicken",
+   "description": "Smoky party jollof, a juicy grilled drumstick, fried plantain and fresh salad.",
+   "price": 75
+  },
+  {
+   "id": "fried-rice",
+   "category": "Rice dishes",
+   "name": "Fried rice & chicken",
+   "description": "Vegetable fried rice with crispy fried chicken, coleslaw and a little shito on the side.",
+   "price": 70
+  },
+  {
+   "id": "assorted",
+   "category": "Rice dishes",
+   "name": "Assorted jollof",
+   "description": "Jollof loaded with chicken, beef, sausage and a boiled egg. For the very hungry.",
+   "price": 95
+  },
+  {
+   "id": "waakye",
+   "category": "Local favourites",
+   "name": "Waakye special",
+   "description": "Rice and beans with boiled egg, fried fish, gari, spaghetti and our house shito.",
+   "price": 60
+  },
+  {
+   "id": "banku",
+   "category": "Local favourites",
+   "name": "Banku & grilled tilapia",
+   "description": "Two balls of soft banku with a whole grilled tilapia and hot green pepper.",
+   "price": 120
+  },
+  {
+   "id": "redred",
+   "category": "Local favourites",
+   "name": "Red red & plantain",
+   "description": "Black-eyed bean stew cooked in palm oil, with sweet fried plantain and gari.",
+   "price": 45
+  },
+  {
+   "id": "burger",
+   "category": "Burgers & wraps",
+   "name": "Cynthia's beef burger",
+   "description": "Flame-grilled beef patty, cheese, lettuce, tomato and our special sauce. Served with fries.",
+   "price": 65
+  },
+  {
+   "id": "chicken-burger",
+   "category": "Burgers & wraps",
+   "name": "Crispy chicken burger",
+   "description": "Crunchy fried chicken fillet, creamy slaw and pickles in a soft toasted bun.",
+   "price": 60
+  },
+  {
+   "id": "shawarma",
+   "category": "Burgers & wraps",
+   "name": "Chicken shawarma",
+   "description": "Spiced chicken, cabbage, carrot, mayo and pepper sauce wrapped in warm pita.",
+   "price": 55
+  },
+  {
+   "id": "kelewele",
+   "category": "Sides",
+   "name": "Kelewele",
+   "description": "Ripe plantain cubes spiced with ginger and pepper, fried golden. Comes with groundnuts.",
+   "price": 25
+  },
+  {
+   "id": "fries",
+   "category": "Sides",
+   "name": "Fries",
+   "description": "Crispy salted fries. Add ketchup or our pepper sauce for free.",
+   "price": 25
+  },
+  {
+   "id": "yam",
+   "category": "Sides",
+   "name": "Fried yam & pepper",
+   "description": "Golden yam chips with a fiery ground pepper and onion dip.",
+   "price": 30
+  },
+  {
+   "id": "sobolo",
+   "category": "Drinks",
+   "name": "Sobolo",
+   "description": "Chilled hibiscus drink with ginger, cloves and pineapple. Made every morning.",
+   "price": 15
+  },
+  {
+   "id": "pineginger",
+   "category": "Drinks",
+   "name": "Pineapple ginger",
+   "description": "Fresh pineapple juice with a gentle ginger kick, served cold.",
+   "price": 15
+  },
+  {
+   "id": "soda",
+   "category": "Drinks",
+   "name": "Chilled soda",
+   "description": "Coke, Fanta or Sprite. Tell us which one in your order notes.",
+   "price": 12
+  },
+  {
+   "id": "water",
+   "category": "Drinks",
+   "name": "Bottled water",
+   "description": "500ml chilled mineral water.",
+   "price": 5
+  },
+  {
+   "id": "family-box",
+   "category": "Rice dishes",
+   "name": "Family box (feeds 4)",
+   "description": "4 jollof & chicken, 2 kelewele, 4 drinks",
+   "price": 340
+  }
+ ]
+}

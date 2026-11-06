@@ -1,0 +1,8 @@
+{
+  "name": "cynthia-fast-foods",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^14.0.0"
+  }
+}

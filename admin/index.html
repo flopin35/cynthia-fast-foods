@@ -229,6 +229,7 @@ details.prov[open] summary{border-bottom:1px solid var(--line)}
 .login-msg.bad{color:#B5381A}
 .login-msg ol{margin:.4rem 0 0 1.2rem}
 .pill.web{background:#E8EEFF;color:#2A4BB5}
+.pill.bolt{background:#DDF7E8;color:#0B7A3E}
 .pill.new{background:var(--gold);color:var(--green-deep)}
 .pill.done{background:#E1F5EA;color:#167A45}
 .st-btns{display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap}
@@ -653,7 +654,7 @@ function renderStacks(cur){
   const cat = {}; cur.forEach(o => o.items.forEach(i => { const c = i.cat || (byName(i.name)||{}).cat || "other"; cat[c] = (cat[c]||0) + i.q*i.price; }));
   stackInto($("#catStack"), $("#catLegend"), Object.keys(CATS).map(k => ({l:CATS[k], v:cat[k]||0, c:CAT_COLORS[k], tip: money(cat[k]||0)})));
   const pay = {}; cur.forEach(o => pay[o.pay] = (pay[o.pay]||0) + 1);
-  stackInto($("#payStack"), $("#payLegend"), [["Mobile Money","#F5B72A"],["Cash","#0E5A3A"]].map(([l,c]) => ({l, v:pay[l]||0, c, tip:`${pay[l]||0} orders`})));
+  stackInto($("#payStack"), $("#payLegend"), [["Mobile Money","#F5B72A"],["Cash","#0E5A3A"],["Bolt","#34D186"]].map(([l,c]) => ({l, v:pay[l]||0, c, tip:`${pay[l]||0} orders`})));
   const mode = {}; cur.forEach(o => mode[o.mode] = (mode[o.mode]||0) + 1);
   stackInto($("#modeStack"), $("#modeLegend"), [["delivery","Delivery","#E8552B"],["pickup","Pickup","#F5B72A"],["walk-in","Walk-in","#C8205E"]].map(([k,l,c]) => ({l, v:mode[k]||0, c, tip:`${mode[k]||0} orders`})));
 }
@@ -765,11 +766,11 @@ function renderTable(cur){
   $("#orderRows").innerHTML = rows.length ? rows.slice(0, showRows).map(o => {
     const d = new Date(o.ts);
     return `<tr class="${o.status === "new" ? "is-new" : ""}"><td style="white-space:nowrap">${d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}<br><span style="color:var(--ink-soft);font-size:.84rem">${d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</span></td>
-      <td><span class="pill ${o.source === "walk-in" ? "walk" : o.source === "website" ? "web" : "wa"}">${esc(o.ref)}</span>${o.source === "website" ? `<br><span class="pill ${o.status === "new" ? "new" : "done"}" style="margin-top:.3rem">${o.status === "new" ? "New from website" : "Confirmed"}</span>${o.status === "new" && canWrite && !demo ? `<div class="st-btns"><button data-st="confirmed" data-sid="${esc(o.id)}">Confirm</button><button data-st="cancelled" data-sid="${esc(o.id)}">Cancel</button></div>` : ""}` : ""}</td>
+      <td><span class="pill ${o.source === "walk-in" ? "walk" : o.source === "website" ? "web" : o.source === "bolt" ? "bolt" : "wa"}">${esc(o.ref)}</span>${o.source === "website" || o.source === "bolt" ? `<br><span class="pill ${o.status === "new" ? "new" : "done"}" style="margin-top:.3rem">${o.status === "new" ? (o.source === "bolt" ? "New from Bolt" : "New from website") : "Confirmed"}</span>${o.status === "new" && canWrite && !demo ? `<div class="st-btns"><button data-st="confirmed" data-sid="${esc(o.id)}">Confirm</button><button data-st="cancelled" data-sid="${esc(o.id)}">Cancel</button></div>` : ""}` : ""}</td>
       <td>${esc(o.customer || "—")}${o.phone ? `<br><span style="color:var(--ink-soft);font-size:.84rem">${esc(o.phone)}</span>` : ""}${o.address ? `<br><span style="color:var(--ink-soft);font-size:.84rem">${esc(o.address)}</span>` : ""}${o.notes ? `<br><span style="font-size:.84rem">Note: ${esc(o.notes)}</span>` : ""}</td>
       <td class="items">${o.items.map(i => `${i.q} × ${esc(i.name)}`).join("<br>")}</td>
       <td>${esc(o.mode === "walk-in" ? "Walk-in" : o.mode === "pickup" ? "Pickup" : "Delivery")}</td>
-      <td><span class="pill ${o.pay === "Cash" ? "cash" : "mm"}">${esc(o.pay)}</span></td>
+      <td><span class="pill ${o.pay === "Cash" ? "cash" : o.pay === "Bolt" ? "bolt" : "mm"}">${esc(o.pay === "Bolt" ? "Paid on Bolt" : o.pay)}</span></td>
       <td class="num">${money(o.total)}</td>
       <td>${!demo && canWrite ? `<button class="del" data-del="${esc(o.id)}">Delete</button>` : ""}</td></tr>`;
   }).join("") : `<tr><td colspan="8" class="empty-chart">No orders in this period.</td></tr>`;
@@ -1071,6 +1072,7 @@ function renderSettings(){
     <div class="btn-row"><button class="btn btn-green btn-sm" id="importOrders" ${canWrite ? "" : "disabled"}>Add these orders</button></div>
     <div class="status" id="importStatus" hidden><i></i><span></span></div>
   </section>`;
+  if (apiMode){ $("#sBody").insertAdjacentHTML("afterbegin", `<section class="set-sec" id="boltSec"><h3>Bolt Food</h3><p class="help">Loading…</p></section>`); renderBoltSection(); }
   if (apiMode) $("#sBody").insertAdjacentHTML("beforeend", `<section class="set-sec"><h3>Admin login</h3><p class="help">You're logged in on this device. Orders are also kept on this device so the dashboard keeps working offline. Log out on shared or borrowed devices.</p><button class="btn btn-line btn-sm" id="logoutBtn">Log out</button></section>`);
 
   $("#sBody").querySelectorAll('input[name="prov"]').forEach(r => r.addEventListener("change", () => {
@@ -1127,6 +1129,60 @@ async function handleAiAction(t){
   }
 }
 
+/* ---------- Bolt Food connection (admin panel on the website only) ---------- */
+const BOLT_URL = location.origin + "/api/bolt/webhook";
+function boltToken(){ const b = new Uint8Array(24); crypto.getRandomValues(b); return "cff_" + btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+async function renderBoltSection(){
+  const box = $("#boltSec"); if (!box) return;
+  let cfg = {}, denied = false;
+  try { const snap = await fb.fs.getDoc(fb.fs.doc(fb.db, "config", "bolt")); cfg = snap.exists() ? snap.data() : {}; }
+  catch(e){ denied = String(e && e.code).includes("permission-denied"); }
+  const last = cfg.lastEventAt ? new Date(cfg.lastEventAt).toLocaleString("en-GB", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}) : null;
+  box.innerHTML = `<h3>Bolt Food</h3>
+    <p class="help">Bolt orders appear here and in the Cynthia Orders app, marked <b>Bolt</b>. Give Bolt the two details below when they set up your integration.</p>
+    ${denied ? `<p class="note warn">Firebase won't let the dashboard save Bolt settings yet. Add the <b>config</b> rule to your Firestore rules (I sent it in our chat), then reopen Settings.</p>` : `
+    <div class="fld"><label>Webhook address (for Bolt)</label><div class="keyrow"><input readonly value="${esc(BOLT_URL)}" aria-label="Webhook address"><button class="btn btn-line btn-sm" data-bolt="copyUrl">Copy</button></div></div>
+    <div class="fld"><label>Connection token (send as a Bearer token)</label>
+      ${cfg.token ? `<div class="keyrow"><input id="boltTok" type="password" readonly value="${esc(cfg.token)}" aria-label="Bolt connection token"><button class="btn btn-line btn-sm" data-bolt="show">Show</button><button class="btn btn-line btn-sm" data-bolt="copyTok">Copy</button></div>
+        <div class="btn-row"><button class="btn btn-line btn-sm" data-bolt="gen">Make a new token</button></div>`
+      : `<div class="btn-row"><button class="btn btn-green btn-sm" data-bolt="gen">Create connection token</button></div>`}
+    </div>
+    <div class="btn-row"><button class="btn btn-line btn-sm" data-bolt="test">Test connection</button><button class="btn btn-line btn-sm" data-bolt="csv">Download menu for Bolt (CSV)</button></div>
+    <div class="status" id="boltStatus" ${last ? "" : "hidden"}><i></i><span>${last ? `Last Bolt message received ${last}.` : ""}</span></div>
+    <p class="note">Keep the token private, like a password. If it's ever shared by mistake, tap <b>Make a new token</b> and send the new one to Bolt.</p>`}`;
+  if (last) $("#boltStatus").className = "status ok";
+}
+async function boltAction(t){
+  const act = t.dataset.bolt, st = $("#boltStatus");
+  const say = (cls, msg) => { if (st) setStatus(st, cls, msg); else toast(msg); };
+  if (act === "copyUrl" || act === "copyTok"){
+    const v = act === "copyUrl" ? BOLT_URL : $("#boltTok").value;
+    try { await navigator.clipboard.writeText(v); toast(act === "copyUrl" ? "Address copied" : "Token copied"); } catch(e){ toast("Select the text and copy it"); }
+  } else if (act === "show"){ const i = $("#boltTok"); i.type = i.type === "password" ? "text" : "password"; t.textContent = i.type === "password" ? "Show" : "Hide"; }
+  else if (act === "gen"){
+    if (t.textContent.startsWith("Make") && !t.classList.contains("sure")){ t.classList.add("sure"); t.textContent = "Tap again: Bolt will need the new token"; return; }
+    try { await fb.fs.setDoc(fb.fs.doc(fb.db, "config", "bolt"), {token: boltToken(), tokenCreatedAt: Date.now()}, {merge:true}); await renderBoltSection(); say("ok", "New token created. Copy it and send it to Bolt with the webhook address."); }
+    catch(e){ say("bad", fbErr(e, "Couldn't create the token.")); }
+  } else if (act === "test"){
+    say("wait", "Checking the connection…");
+    try {
+      const r = await fetch(BOLT_URL, {cache:"no-store"}); const j = await r.json().catch(() => ({}));
+      if (r.ok && j.tokenSet) say("ok", "Ready. The website can receive Bolt orders.");
+      else if (r.ok) say("bad", "Almost ready: create a connection token above.");
+      else if (j.error === "not_configured" || j.error === "bad_service_account") say("bad", "The website can't save Bolt orders yet: add FIREBASE_SERVICE_ACCOUNT in Vercel (see the steps I sent you), then redeploy.");
+      else say("bad", "The connection isn't working yet. Try again in a minute.");
+    } catch(e){ say("bad", "Couldn't reach the website. Check your internet connection."); }
+  } else if (act === "csv"){
+    try {
+      const m = await fetch("/menu.json", {cache:"no-store"}).then(r => r.json());
+      const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const rows = [["Category","Name","Description","Price (GHS)"], ...m.items.map(i => [i.category, i.name, i.description, i.price])];
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([rows.map(r => r.map(q).join(",")).join("\r\n")], {type:"text/csv"}));
+      a.download = "cynthia-menu-for-bolt.csv"; document.body.appendChild(a); a.click(); a.remove();
+    } catch(e){ toast("Couldn't load the menu. Try again."); }
+  }
+}
+
 function setStatus(el, cls, msg){ el.hidden = false; el.className = "status " + cls; el.querySelector("span").textContent = msg; }
 function parseBackup(txt){
   let arr; try { arr = JSON.parse(txt); } catch(e){ return null; }
@@ -1149,6 +1205,7 @@ document.addEventListener("click", async e => {
   if (t.id === "settingsBtn") openSettings();
   else if (t.id === "closeSettings") closeSettings();
   else if (t.dataset.act && t.dataset.p) handleAiAction(t);
+  else if (t.dataset.bolt) boltAction(t);
   else if (t.id === "copyOrders"){
     const txt = JSON.stringify(realOrders);
     try { await navigator.clipboard.writeText(txt); toast(`${realOrders.length} orders copied`); }
@@ -1243,7 +1300,7 @@ function normalise(snap){
   const d = snap.data() || {};
   const items = Array.isArray(d.items) ? d.items.filter(i => i && i.name).map(i => ({id:String(i.id||""), name:String(i.name), cat:String(i.cat || (byName(String(i.name))||{}).cat || "other"), price:+i.price || 0, q:Math.max(0, +i.q || 0)})) : [];
   return {id:snap.id, ref:String(d.ref || snap.id), ts:+d.ts || 0, items, subtotal:+d.subtotal || 0, fee:+d.fee || 0, total:+d.total || 0,
-    mode:["delivery","pickup","walk-in"].includes(d.mode) ? d.mode : "delivery", pay: d.pay === "Cash" ? "Cash" : "Mobile Money",
+    mode:["delivery","pickup","walk-in"].includes(d.mode) ? d.mode : "delivery", pay: d.pay === "Cash" ? "Cash" : d.pay === "Bolt" ? "Bolt" : "Mobile Money",
     source:String(d.source||""), customer:String(d.customer||""), phone:String(d.phone||""), discount:+d.discount || 0, promo:String(d.promo||"").slice(0,30),
     status: ["new","confirmed","cancelled"].includes(d.status) ? d.status : "confirmed", address:String(d.address||"").slice(0,160), notes:String(d.notes||"").slice(0,300)};
 }
@@ -1290,8 +1347,8 @@ function startLive(){
     clearTimeout(timer); loadSlow = false;
     const list = snap.docs.map(normalise).filter(o => o.ts > 0);
     if (knownIds){
-      const fresh = list.filter(o => !knownIds.has(o.id) && o.source === "website");
-      if (fresh.length) toast(fresh.length === 1 ? `🔔 New website order ${fresh[0].ref} (${money(fresh[0].total)})` : `🔔 ${fresh.length} new website orders`);
+      const fresh = list.filter(o => !knownIds.has(o.id) && (o.source === "website" || o.source === "bolt") && o.status === "new");
+      if (fresh.length) toast(fresh.length === 1 ? `🔔 New ${fresh[0].source === "bolt" ? "Bolt" : "website"} order ${fresh[0].ref} (${money(fresh[0].total)})` : `🔔 ${fresh.length} new orders`);
     }
     knownIds = new Set(list.map(o => o.id));
     realOrders = list;

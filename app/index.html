@@ -74,6 +74,7 @@ main{padding:1rem 1rem calc(5.5rem + var(--bot))}
 .tag.no{background:#EEE;color:#777}
 .tag.mm{background:var(--gold-soft)}
 .tag.walk{background:#FBE3EC}
+.tag.bolt{background:#34D186;color:#063D1F}
 .amt{font-family:var(--display);font-weight:800;font-size:1.3rem;color:var(--green);white-space:nowrap}
 .empty{text-align:center;color:var(--soft);padding:2.5rem 1rem;background:#fff;border-radius:18px;border:1px dashed var(--line)}
 .empty b{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:.2rem}
@@ -250,7 +251,7 @@ function norm(id, d){
   const items = Array.isArray(d.items) ? d.items.filter(i => i && i.name).map(i => ({name:String(i.name), price:+i.price || 0, q:+i.q || 0})) : [];
   return {id, ref:String(d.ref || id), ts:+d.ts || 0, items, total:+d.total || 0, subtotal:+d.subtotal || items.reduce((s,i) => s + i.price*i.q, 0), fee:+d.fee || 0,
     discounts: Array.isArray(d.discounts) ? d.discounts.map(x => ({label:String(x.label||""), amount:+x.amount||0})) : [],
-    mode: ["delivery","pickup","walk-in"].includes(d.mode) ? d.mode : "delivery", pay: d.pay === "Cash" ? "Cash" : "Mobile Money",
+    mode: ["delivery","pickup","walk-in"].includes(d.mode) ? d.mode : "delivery", pay: d.pay === "Cash" ? "Cash" : d.pay === "Bolt" ? "Bolt" : "Mobile Money",
     customer:String(d.customer||""), phone:String(d.phone||""), address:String(d.address||""), notes:String(d.notes||""),
     source:String(d.source||""), status:["new","confirmed","cancelled"].includes(d.status) ? d.status : "confirmed"};
 }
@@ -276,7 +277,7 @@ function card(o){
     <div class="card-top"><span class="ref">${esc(o.ref)}</span><span class="ago">${ago(o.ts)}</span></div>
     <div class="cust">${esc(who)}</div>
     <div class="items">${o.items.map(i => `${i.q}× ${esc(i.name)}`).join(", ")}</div>
-    <div class="card-bot"><div class="tags">${stTag(o.status)}<span class="tag ${o.mode === "walk-in" ? "walk" : ""}">${modeLabel(o.mode)}</span><span class="tag ${o.pay === "Cash" ? "" : "mm"}">${o.pay === "Cash" ? "Cash" : "MoMo"}</span></div><span class="amt">${money(o.total)}</span></div>
+    <div class="card-bot"><div class="tags">${stTag(o.status)}<span class="tag ${o.mode === "walk-in" ? "walk" : ""}">${modeLabel(o.mode)}</span>${o.source === "bolt" ? `<span class="tag bolt">Bolt</span>` : `<span class="tag ${o.pay === "Cash" ? "" : "mm"}">${o.pay === "Cash" ? "Cash" : "MoMo"}</span>`}</div><span class="amt">${money(o.total)}</span></div>
   </button>`;
 }
 const emptyBox = (t, s) => `<div class="empty"><b>${t}</b>${s}</div>`;
@@ -324,7 +325,7 @@ function openOrder(id){
   $("#sheet").innerHTML = `<div class="grab"></div>
     <h3 id="sheetTitle">${esc(o.customer || (o.mode === "walk-in" ? "Walk-in customer" : "Customer"))}</h3>
     <div class="meta">${esc(o.ref)} · ${d.toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short"})}, ${d.toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"})}</div>
-    <div class="tags" style="margin-bottom:.9rem">${stTag(o.status)}<span class="tag">${modeLabel(o.mode)}</span><span class="tag ${o.pay === "Cash" ? "" : "mm"}">${esc(o.pay)}</span>${o.source === "website" ? `<span class="tag">Website</span>` : ""}</div>
+    <div class="tags" style="margin-bottom:.9rem">${stTag(o.status)}<span class="tag">${modeLabel(o.mode)}</span><span class="tag ${o.pay === "Cash" ? "" : "mm"}">${esc(o.pay)}</span>${o.source === "website" ? `<span class="tag">Website</span>` : o.source === "bolt" ? `<span class="tag bolt">Bolt</span>` : ""}</div>
     ${o.phone ? `<div class="actions">
       <a class="act call" href="tel:${esc(o.phone.replace(/[^\d+]/g, ""))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Call</a>
       <a class="act wa" href="https://wa.me/${intlPhone(o.phone)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>WhatsApp</a>
@@ -339,7 +340,7 @@ function openOrder(id){
       ${o.items.map(i => `<div class="row"><span>${i.q} × ${esc(i.name)}</span><span>${i.price ? money(i.q*i.price) : "Free"}</span></div>`).join("")}
       ${o.discounts.map(x => `<div class="row"><span class="disc">${esc(x.label)}</span><span class="disc">−${money(x.amount)}</span></div>`).join("")}
       ${o.mode !== "walk-in" ? `<div class="row"><span>${modeLabel(o.mode)}</span><span>${o.fee ? money(o.fee) : "Free"}</span></div>` : ""}
-      <div class="row tot"><span>Total (${esc(o.pay)})</span><span>${money(o.total)}</span></div>
+      <div class="row tot"><span>Total (${esc(o.pay === "Bolt" ? "paid on Bolt" : o.pay)})</span><span>${money(o.total)}</span></div>
     </div>
     <button class="btn" id="closeSheet" style="margin-top:.4rem">Close</button>`;
   $("#sheet").classList.add("open"); $("#scrim").classList.add("open");
@@ -360,7 +361,7 @@ function beep(){
 let alertTimer, alertId = null;
 function alertNew(list){
   const o = list[0];
-  $("#alertText").textContent = list.length === 1 ? `🔔 New order ${o.ref}: ${o.customer || "Customer"}, ${money(o.total)}` : `🔔 ${list.length} new orders`;
+  $("#alertText").textContent = list.length === 1 ? `🔔 New ${o.source === "bolt" ? "Bolt " : ""}order ${o.ref}: ${o.customer || "Customer"}, ${money(o.total)}` : `🔔 ${list.length} new orders`;
   alertId = list.length === 1 ? o.id : null;
   $("#alert").classList.add("show"); clearTimeout(alertTimer); alertTimer = setTimeout(() => $("#alert").classList.remove("show"), 7000);
   beep(); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e){}

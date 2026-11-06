@@ -308,6 +308,7 @@ fieldset.field{border:0}
 .btn-sm{padding:.7rem 1.1rem;font-size:.92rem}
 @media (max-width:760px){ body.has-items .welcome{bottom:5.6rem} }
 
+.placed-pay{background:var(--green-mist);color:var(--green);font-weight:600;border-radius:12px;padding:.6rem .8rem;margin:.6rem 0 .2rem;font-size:.93rem}
 .save-state{font-weight:600;font-size:.92rem;margin:.2rem 0 .6rem}
 .save-state.wait{color:var(--ink-soft)}
 .save-state.ok{color:#167A45}
@@ -526,7 +527,7 @@ section[id]{scroll-margin-top:70px}
       <ol class="steps">
         <li class="step"><h3>Pick your food</h3><p>Add dishes from the menu. You can change quantities any time before you confirm.</p></li>
         <li class="step"><h3>Tell us where</h3><p>Choose delivery or pickup, add your phone number and how you'd like to pay.</p></li>
-        <li class="step"><h3>We cook and deliver</h3><p>Send your order to our kitchen on WhatsApp. We confirm, cook it fresh and bring it hot.</p></li>
+        <li class="step"><h3>We cook and deliver</h3><p>Place your order and it goes straight to our kitchen. We cook it fresh and bring it hot. Pay when it arrives.</p></li>
       </ol></div>
     </div>
   </section>
@@ -824,7 +825,7 @@ function renderBadge(){
 function setProgress(){
   const idx = {cart:1, details:2, done:3}[step];
   ["#p1","#p2","#p3"].forEach((s,i) => $(s).classList.toggle("on", i < idx));
-  $("#drawerTitle").textContent = {cart:"Your order", details:"Delivery details", done:"Order ready"}[step];
+  $("#drawerTitle").textContent = {cart:"Your order", details:"Delivery details", done: lastOrder && lastOrder.placed ? "Order placed" : "Send your order"}[step];
 }
 function renderDrawer(){
   setProgress();
@@ -864,7 +865,7 @@ function renderDrawer(){
         <div class="field" id="f-addr"><label for="address">Delivery address</label><textarea id="address" name="address" rows="2" autocomplete="street-address" placeholder="Area, street and a landmark">${saved.address||""}</textarea><span class="err">Enter an address so the rider can find you.</span></div>
         <fieldset class="field"><legend>Payment</legend>
           <div class="choice-row">
-            <label class="choice"><input type="radio" name="pay" value="Mobile Money" checked><span>Mobile Money<small>MTN, Telecel, AirtelTigo</small></span></label>
+            <label class="choice"><input type="radio" name="pay" value="Mobile Money" checked><span>Mobile Money<small>Pay when it arrives</small></span></label>
             <label class="choice"><input type="radio" name="pay" value="Cash"><span>Cash<small>Pay when it arrives</small></span></label>
           </div>
         </fieldset>
@@ -877,7 +878,7 @@ function renderDrawer(){
       const prd = pricing(mode);
       let box = $("#detailTotals"); if (!box){ box = document.createElement("div"); box.id = "detailTotals"; box.className = "cart-extras"; body.appendChild(box); }
       box.innerHTML = `<h4 style="font-size:.95rem;margin-bottom:.4rem">Order summary</h4>` + totalsHTML(prd, mode);
-      foot.innerHTML = footBar(prd.total, `<button class="btn btn-gold" type="submit" form="checkout">Confirm order</button>`);
+      foot.innerHTML = footBar(prd.total, `<button class="btn btn-gold" type="submit" form="checkout">Place order</button>`);
       $("#f-addr").style.display = mode === "pickup" ? "none" : "";
     };
     renderFootTotals(); window.__refreshTotals = renderFootTotals;
@@ -886,26 +887,40 @@ function renderDrawer(){
     setTimeout(() => $("#name").focus(), 50);
   }
   if (step === "done" && lastOrder){
-    const o = lastOrder;
-    body.innerHTML = `
-      <div class="done">
-        <div class="road" aria-hidden="true"><span class="sun"></span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="drive">${RIDER_SVG}</div></div>
-        <h3>Thanks, ${escapeHtml(o.name.split(" ")[0])}! One last tap.</h3>
-        <div class="ref">Order ${o.ref}</div>
-        <p class="save-state ${o.saveState || "wait"}" id="saveState" aria-live="polite">${!/^https?:$/.test(location.protocol) ? "" : o.saveState === "ok" ? "✓ Our kitchen has received your order." : o.saveState === "bad" ? "We couldn't reach our system. Please send your order on WhatsApp so we get it." : "Sending your order to our kitchen…"}</p>
-        <p style="color:var(--ink-soft)">Send your order to our kitchen on WhatsApp and we'll confirm it and start cooking straight away.</p>
-        <div class="receipt">
+    const o = lastOrder, first = escapeHtml(o.name.split(" ")[0]);
+    const receipt = `<div class="receipt">
           ${o.items.map(i => `<div><span>${i.q} × ${i.name}</span><span>${i.gift ? "Free" : money(i.q*i.price)}</span></div>`).join("")}
           ${o.discounts.map(d => `<div style="color:var(--hibiscus)"><span>${d.label}</span><span>−${money(d.amount)}</span></div>`).join("")}
           <div><span>${o.mode==="pickup"?"Pickup":"Delivery"}</span><span>${o.fee?money(o.fee):"Free"}</span></div>
           <div class="tot"><span>Total (${o.pay})</span><span>${money(o.total)}</span></div>
-        </div>
-        <a class="btn wa btn-block" href="${o.waLink}" target="_blank" rel="noopener">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>
-          Send order on WhatsApp</a>
+        </div>`;
+    const road = `<div class="road" aria-hidden="true"><span class="sun"></span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div class="drive">${RIDER_SVG}</div></div>`;
+    const waIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>`;
+    if (o.placed){
+      body.innerHTML = `
+      <div class="done">
+        ${road}
+        <h3>Order placed, ${first}!</h3>
+        <div class="ref">Order ${o.ref}</div>
+        <p style="color:var(--ink-soft)">Our kitchen has your order and is getting it ready. We'll call you on <b style="color:var(--ink)">${escapeHtml(o.phone)}</b> if we need anything.</p>
+        <p class="placed-pay">Pay ${o.pay === "Cash" ? "in cash" : "with Mobile Money"} ${o.mode === "pickup" ? "when you pick up your food" : "when your food arrives"}.</p>
+        ${receipt}
+        <a class="btn btn-block" style="border:2px solid var(--line)" href="tel:${BUSINESS.phoneDisplay.replace(/\s/g, "")}">Call us: ${BUSINESS.phoneDisplay}</a>
+        <p class="small-note">Questions about your order? <a href="https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent("Hi Cynthia Fast Foods, about my order " + o.ref)}" target="_blank" rel="noopener">Chat with us on WhatsApp</a>.</p>
+      </div>`;
+    } else {
+      body.innerHTML = `
+      <div class="done">
+        ${road}
+        <h3>Almost done, ${first}!</h3>
+        <div class="ref">Order ${o.ref}</div>
+        <p class="save-state bad">${o.offline ? "Online ordering isn't available here." : "We couldn't place your order online just now."} Send it to our kitchen on WhatsApp and we'll start cooking straight away.</p>
+        ${receipt}
+        <a class="btn wa btn-block" href="${o.waLink}" target="_blank" rel="noopener">${waIcon} Send order on WhatsApp</a>
         <button class="btn btn-block" style="margin-top:.7rem;border:2px solid var(--line)" data-copy>Copy order text</button>
         <p class="small-note">No WhatsApp? Call us on <b>${BUSINESS.phoneDisplay}</b> and read out order ${o.ref}.</p>
       </div>`;
+    }
     foot.innerHTML = `<button class="btn btn-green btn-block" data-new>Start a new order</button>`;
     foot.style.display = "";
   }
@@ -932,8 +947,9 @@ function totalsHTML(pr, mode){
 }
 function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
-function submitOrder(e){
+async function submitOrder(e){
   e.preventDefault();
+  if (submitOrder.busy) return;
   if (!isOpenNow()){ showClosed(); return; }
   const f = e.target, data = Object.fromEntries(new FormData(f));
   let ok = true;
@@ -956,18 +972,23 @@ function submitOrder(e){
     data.mode === "delivery" ? `Address: ${data.address}` : "I will pick it up.",
     data.notes ? `Notes: ${data.notes}` : ""
   ].filter((l,i,a) => !(l === "" && a[i-1] === "")).join("\n").trim();
-  // Save the order to the admin panel (Firebase). Only runs on the live website.
-  saveOrderOnline({ref, items: items.map(i => ({id:String(i.id||""), name:String(i.name), cat:String(i.cat||""), price:Number(i.price)||0, q:Number(i.q)||1})),
+  // Place the order online (Firebase). Falls back to WhatsApp if it can't be saved.
+  const placeBtn = document.querySelector('button[form="checkout"]');
+  submitOrder.busy = true;
+  if (placeBtn){ placeBtn.disabled = true; placeBtn.textContent = "Placing your order…"; }
+  const placed = await saveOrderOnline({ref, items: items.map(i => ({id:String(i.id||""), name:String(i.name), cat:String(i.cat||""), price:Number(i.price)||0, q:Number(i.q)||1})),
     discounts: pr.discounts.map(d => ({label:String(d.label), amount:Number(d.amount)||0})), subtotal: pr.itemsTotal,
     discount: pr.discounts.reduce((s2,d) => s2 + d.amount, 0), promo: promo ? promo.code : "", fee, total, mode:data.mode, pay:data.pay,
     customer:String(data.name||"").slice(0,60), phone:String(data.phone||"").slice(0,30), address: data.mode === "delivery" ? String(data.address||"").slice(0,160) : "",
     notes:String(data.notes||"").slice(0,300), source:"website", status:"new", ts: Date.now(), savedAt: Date.now()});
+  submitOrder.busy = false;
+  if (placeBtn){ placeBtn.disabled = false; placeBtn.textContent = "Place order"; }
   if (promo){ lsSet("cff-welcome-used", true); promo = null; lsSet("cff-promo", null); }
-  lastOrder = {ref, name:data.name, items, discounts:pr.discounts, fee, total, mode:data.mode, pay:data.pay, text:lines,
+  lastOrder = {ref, placed: placed === true, offline: placed === null, phone:data.phone, name:data.name, items, discounts:pr.discounts, fee, total, mode:data.mode, pay:data.pay, text:lines,
     waLink:`https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(lines)}`};
+  if (placed === true){ cart = {}; save(); renderBadge(); refreshControls(); }
   step = "done";
   renderDrawer();
-  if (lastOrder && lastOrder.saveState) setSaveState(lastOrder.saveState);
 }
 
 /* ============================================================
@@ -1092,13 +1113,15 @@ function setSaveState(state){
   el.textContent = state === "ok" ? "✓ Our kitchen has received your order." : state === "bad" ? "We couldn't reach our system. Please send your order on WhatsApp so we get it." : "Sending your order to our kitchen…";
 }
 async function saveOrderOnline(order){
-  if (!/^https?:$/.test(location.protocol)) return;
+  if (!/^https?:$/.test(location.protocol)) return null;          // preview copies: WhatsApp only
   lsSet("cff-pending-orders", [...pending().filter(o => o.ref !== order.ref), order]);
   for (let attempt = 0; attempt < 3; attempt++){
-    try { await sendOrder(order); lsSet("cff-pending-orders", pending().filter(o => o.ref !== order.ref)); setSaveState("ok"); return; }
-    catch(e){ await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+    try { await sendOrder(order); lsSet("cff-pending-orders", pending().filter(o => o.ref !== order.ref)); return true; }
+    catch(e){ await new Promise(r => setTimeout(r, 1200 * (attempt + 1))); }
   }
-  setSaveState("bad");
+  // Couldn't save: the customer sends it on WhatsApp instead, so don't retry later (avoids duplicates)
+  lsSet("cff-pending-orders", pending().filter(o => o.ref !== order.ref));
+  return false;
 }
 function retryPendingOrders(){
   if (!/^https?:$/.test(location.protocol)) return;

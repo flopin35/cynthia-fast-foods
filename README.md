@@ -34,3 +34,12 @@ Hosted on Vercel: https://cynthia-fast-foods.vercel.app (redeploys automatically
 - `/download` is the download page for the app.
 - `android/` is the Android app. Every change in `android/` is built by GitHub Actions (`.github/workflows/android.yml`) and the APK is published to `/download/cynthia-orders.apk`.
 - To keep the same signing key between Android builds, add repository secrets `CFF_KEYSTORE_BASE64` and `CFF_KEYSTORE_PASSWORD`. Without them, each build gets a new key and the old app must be uninstalled before installing a new build.
+
+## Ordering and Bolt Food
+
+- Website orders are placed directly on the site (saved to Firestore). WhatsApp is only a fallback if saving fails.
+- `api/bolt/webhook.js` receives Bolt Food orders and saves them as `orders/BOLT-<id>` with `source: "bolt"`.
+  - Needs `FIREBASE_SERVICE_ACCOUNT` (service-account JSON) set in Vercel.
+  - Bolt authenticates with the token created in the admin panel (Settings → Bolt Food), stored in Firestore `config/bolt`.
+  - The original Bolt message is kept in `rawBolt` so the field mapping can be adjusted once Bolt sends real orders.
+- `menu.json` is the menu feed (also downloadable as CSV from admin Settings → Bolt Food). Regenerate it when the menu in `index.html` changes.

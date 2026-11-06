@@ -3,3 +3,4 @@ android/.gradle/
 android/app/build/
 android/build/
 build.log
+node_modules/
