@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cff_green">#0E5A3A</color>
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/cff_green</item>
+        <item name="android:statusBarColor">@color/cff_green</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:colorPrimary">@color/cff_green</item>
+        <item name="android:colorAccent">#F5B72A</item>
+    </style>
+</resources>
