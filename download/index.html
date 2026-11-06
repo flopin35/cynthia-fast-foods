@@ -219,10 +219,10 @@ function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("sh
 // Show the version and size of the latest Android build
 fetch("/download/app-version.json", {cache:"no-store"}).then(r => r.ok ? r.json() : null).then(v => {
   if (!v){ throw 0; }
-  const mb = (v.bytes / 1048576).toFixed(1);
+  const mb = v.bytes < 1048576 ? Math.max(1, Math.round(v.bytes / 1024)) + " KB" : (v.bytes / 1048576).toFixed(1) + " MB";
   const d = new Date(v.built).toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"});
-  $("#ver").textContent = `Version ${v.version} · ${mb} MB · updated ${d}`;
-  $("#apkLabel").textContent = `Download for Android (${mb} MB)`;
+  $("#ver").textContent = `Version ${v.version} · ${mb} · updated ${d}`;
+  $("#apkLabel").textContent = `Download for Android (${mb})`;
 }).catch(() => {
   $("#ver").textContent = "The Android app is being built. Check back in a few minutes, or open the app in your browser for now.";
   ["#apkBtn", "#apkBtn2"].forEach(s => $(s).setAttribute("aria-disabled", "true"));

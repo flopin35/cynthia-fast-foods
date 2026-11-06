@@ -27,3 +27,10 @@ Hosted on Vercel: https://cynthia-fast-foods.vercel.app (redeploys automatically
 - Log in with the admin email and password created in Firebase → Authentication.
 - Who can read or change orders is controlled by the Firestore security rules (Firebase console → Firestore → Rules).
 - The admin panel keeps a copy of orders on the device, so it keeps working with a weak connection and syncs when back online.
+
+## Orders app
+
+- `/app` is the Cynthia Orders app: new orders live (with alerts) and order history. It can be installed from the browser.
+- `/download` is the download page for the app.
+- `android/` is the Android app. Every change in `android/` is built by GitHub Actions (`.github/workflows/android.yml`) and the APK is published to `/download/cynthia-orders.apk`.
+- To keep the same signing key between Android builds, add repository secrets `CFF_KEYSTORE_BASE64` and `CFF_KEYSTORE_PASSWORD`. Without them, each build gets a new key and the old app must be uninstalled before installing a new build.
